@@ -9,7 +9,7 @@ class Api {
   }
 
   getApi(data) {
-    console.log('data', data);
+    // console.log('data', data);
     return fetch(`${this._baseUrl}`, {
       method: 'POST',
       headers: this._headers,
@@ -80,8 +80,11 @@ class Api {
         jsonrpc: "2.0",
         method: "trigger.get",
         params: {
-          output: ["triggerid", "description", "priority", "value"], // Какие поля выгружать
-          selectHosts: ["hostid", "name"], // Связанные хосты
+          output: ["triggerid", "expression", "description", "comments", "priority", "status"], // Какие поля выгружать
+          selectHosts: ["hostid", "name", "description"], // Связанные хосты
+          selectTags: "extend",
+          sortfield: "priority",
+          sortorder: "DESC",
           hostids: hostIds // Указываем список ID хостов
         },
         auth: `${authToken}`,
@@ -91,11 +94,11 @@ class Api {
     .then(res => this._getResponse(res))
     .catch(console.log)
   }
-
 }
 
 export const api = new Api({
   baseUrl: 'http://zabbix.lan:8080/api_jsonrpc.php',
+  // baseUrl: 'https://zabbix.vseinstrumenti.ru/api_jsonrpc.php',
   headers: {
     'Content-Type': 'application/json',
     // "Access-Control-Allow-Origin": "*",

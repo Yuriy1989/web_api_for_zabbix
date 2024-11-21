@@ -33,9 +33,30 @@
 
 .form {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
   margin: 10px;
+}
+
+.blockAuth {
+  display: flex;
+  flex-direction: column;
+}
+
+.blockTag {
+  display: flex;
+  flex-direction: column;
+}
+
+.block {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+
+}
+
+.blockButton {
+  display: flex;
+  flex-direction: row;
 }
 
 .serviceName {
@@ -48,4 +69,5 @@
   height: 30px;
   width: 180px;
   margin: 10px;
+  font-size: 12px;
 }
