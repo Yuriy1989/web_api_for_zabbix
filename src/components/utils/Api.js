@@ -9,7 +9,6 @@ class Api {
   }
 
   getApi(data) {
-    // console.log('data', data);
     return fetch(`${this._baseUrl}`, {
       method: 'POST',
       headers: this._headers,
