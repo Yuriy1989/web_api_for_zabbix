@@ -96,7 +96,7 @@ class Api {
 }
 
 export const api = new Api({
-  baseUrl: 'http://zabbix.lan:8080/api_jsonrpc.php',
+  baseUrl: 'http://192.168.2.37:8080/api_jsonrpc.php',
   // baseUrl: 'https://zabbix.vseinstrumenti.ru/api_jsonrpc.php',
   headers: {
     'Content-Type': 'application/json',
