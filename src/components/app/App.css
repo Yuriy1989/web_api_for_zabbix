@@ -72,3 +72,12 @@
   margin: 10px;
   font-size: 12px;
 }
+
+.table {
+  display: flex;
+  flex-direction: column;
+}
+
+.buttonExportToExcel {
+  width: 100px;
+}

@@ -4,6 +4,7 @@ import ExcelJS from "exceljs";
 
 import "./App.css";
 import { api } from "../utils/Api";
+import TableData from "../table/Table"
 
 function App() {
   const [dataZabbix, setDataZabbix] = useState();
@@ -68,6 +69,7 @@ function App() {
   const performApiRequests = (res) => {
     // Список значений для запроса
     const services = [
+      "home",
       "viru",
       "bffgo",
       "loyal",
@@ -359,7 +361,10 @@ function App() {
             </button>
           </div>
         </form>
-        <button onClick={exportToExcel}>Export in Excel</button>
+        <div className="table">
+          <TableData dataZabbix={dataZabbix} />
+          <button className="buttonExportToExcel" onClick={exportToExcel}>Export in Excel</button>
+        </div>
       </main>
     </>
   );
