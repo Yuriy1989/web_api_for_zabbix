@@ -6,7 +6,6 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
-import { useState } from "react";
 
 const TableData = ({dataZabbix = []}) => {
   const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -30,7 +29,7 @@ const TableData = ({dataZabbix = []}) => {
   }));
 
   return (
-    <TableContainer component={Paper}  sx={{ maxHeight: 440 }}>
+    <TableContainer component={Paper}  sx={{ maxHeight: 600 }}>
       <Table sx={{ minWidth: 650 }} size="small" aria-label="sticky table">
         <TableHead>
           <TableRow>
