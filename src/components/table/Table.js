@@ -1,83 +1,116 @@
 import Table from "@mui/material/Table";
-import { styled } from '@mui/material/styles';
-import TableCell, { tableCellClasses } from '@mui/material/TableCell';
+import { styled } from "@mui/material/styles";
+import TableCell, { tableCellClasses } from "@mui/material/TableCell";
 import TableBody from "@mui/material/TableBody";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 
-const TableData = ({dataZabbix = []}) => {
+const TableData = ({ dataZabbix = [] }) => {
   const StyledTableCell = styled(TableCell)(({ theme }) => ({
     [`&.${tableCellClasses.head}`]: {
       backgroundColor: theme.palette.common.black,
       color: theme.palette.common.white,
+      fontSize: 12,
     },
     [`&.${tableCellClasses.body}`]: {
-      fontSize: 14,
+      fontSize: "0.75rem",
+      maxWidth: "150px",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
     },
   }));
 
   const StyledTableRow = styled(TableRow)(({ theme }) => ({
-    '&:nth-of-type(odd)': {
+    "&:nth-of-type(odd)": {
       backgroundColor: theme.palette.action.hover,
     },
-    // hide last border
-    '&:last-child td, &:last-child th': {
-      border: 0,
+    "&:last-child td, &:last-child th": {
+      border: 1,
     },
   }));
 
   return (
-    <TableContainer component={Paper}  sx={{ maxHeight: 600 }}>
-      <Table sx={{ minWidth: 650 }} size="small" aria-label="sticky table">
-        <TableHead>
-          <TableRow>
-            <StyledTableCell align="center">#</StyledTableCell>
-            <StyledTableCell align="center">Наименование host</StyledTableCell>
-            <StyledTableCell align="center">Примечание по host</StyledTableCell>
-            <StyledTableCell align="center">Описание tags по host</StyledTableCell>
-            <StyledTableCell align="center">Приоритет</StyledTableCell>
-            <StyledTableCell align="center">Описание trigger</StyledTableCell>
-            <StyledTableCell align="center">triggerid</StyledTableCell>
-            <StyledTableCell align="center">expression</StyledTableCell>
-            <StyledTableCell align="center">
-              status (0 - антивен, 1 - выключен)
-            </StyledTableCell>
-            <StyledTableCell align="center">Примечание по триггеру</StyledTableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {dataZabbix?.length > 0 ? (
-            dataZabbix?.map((row, index) => (
-              <StyledTableRow
-                key={index}
-                sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-              >
-                <TableCell align="center" component="th" scope="row">
-                  {index+1}
-                </TableCell>
-                <TableCell align="center">{row?.hosts[0].name}</TableCell>
-                <TableCell align="center">{row?.hosts[0].description}</TableCell>
-                <TableCell align="center">{row?.hosts[0].description}</TableCell>
-                <TableCell align="center">{row?.status}</TableCell>
-                <TableCell align="left">{row?.comments}</TableCell>
-                <TableCell align="left">{row?.description}</TableCell>
-                <TableCell align="left">{row?.triggerid}</TableCell>
-                <TableCell align="left">{row?.expression}</TableCell>
-                <TableCell align="left">{row?.comments}</TableCell>
-              </StyledTableRow>
-            ))
-          ) : (
+    <Paper sx={{ width: "100%", overflow: "hidden" }}>
+      <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
+        <Table
+          stickyHeader
+          sx={{ minWidth: "100%", tableLayout: "hidden" }}
+          size="small"
+          aria-label="a dense sticky table"
+        >
+          <TableHead>
             <TableRow>
-              <TableCell colSpan={5} align="center">
-                No data available
-              </TableCell>
+              <StyledTableCell align="center" sx={{ width: "5%" }}>
+                #
+              </StyledTableCell>
+              <StyledTableCell align="center" sx={{ width: "15%" }}>
+                Наименование host
+              </StyledTableCell>
+              <StyledTableCell align="center" sx={{ width: "10%" }}>
+                Примечание по host
+              </StyledTableCell>
+              <StyledTableCell align="center" sx={{ width: "15%" }}>
+                Описание tags по host
+              </StyledTableCell>
+              <StyledTableCell align="center" sx={{ width: "5%" }}>
+                Приоритет
+              </StyledTableCell>
+              <StyledTableCell align="center" sx={{ width: "20%" }}>
+                Описание trigger
+              </StyledTableCell>
+              <StyledTableCell align="center" sx={{ width: "10%" }}>
+                triggerid
+              </StyledTableCell>
+              <StyledTableCell align="center" sx={{ width: "10%" }}>
+                expression
+              </StyledTableCell>
+              <StyledTableCell align="center" sx={{ width: "10%" }}>
+                status (0 - антивен, 1 - выключен)
+              </StyledTableCell>
+              <StyledTableCell align="center" sx={{ width: "10%" }}>
+                Примечание по триггеру
+              </StyledTableCell>
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          </TableHead>
+          <TableBody>
+            {dataZabbix?.length > 0 ? (
+              dataZabbix?.map((row, index) => (
+                <StyledTableRow
+                  key={index}
+                  sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                >
+                  <StyledTableCell align="center" component="th" scope="row">
+                    {index + 1}
+                  </StyledTableCell>
+                  <StyledTableCell align="center">{row?.hosts?.[0]?.name}</StyledTableCell>
+                  <StyledTableCell align="center">
+                    {row?.hosts?.[0]?.description}
+                  </StyledTableCell>
+                  <StyledTableCell align="center">
+                    {row?.hosts?.[0]?.description}
+                  </StyledTableCell>
+                  <StyledTableCell align="center">{row?.status}</StyledTableCell>
+                  <StyledTableCell align="left">{row?.comments}</StyledTableCell>
+                  <StyledTableCell align="left">{row?.description}</StyledTableCell>
+                  <StyledTableCell align="left">{row?.triggerid}</StyledTableCell>
+                  <StyledTableCell align="left">{row?.expression}</StyledTableCell>
+                  <StyledTableCell align="left">{row?.comments}</StyledTableCell>
+                </StyledTableRow>
+              ))
+            ) : (
+              <TableRow>
+                <StyledTableCell colSpan={10} align="center">
+                  No data available
+                </StyledTableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Paper>
   );
 };
 
