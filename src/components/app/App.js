@@ -1,13 +1,29 @@
 import { useEffect, useState } from "react";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardActions from "@mui/material/CardActions";
+import CardContent from "@mui/material/CardContent";
+import Typography from "@mui/material/Typography";
 
 import "./App.css";
 import { api } from "../utils/Api";
-import TableData from "../table/Table"
+import TableData from "../table/Table";
 
 function App() {
   const [dataZabbix, setDataZabbix] = useState();
+
+  const bull = (
+    <Box
+      component="span"
+      sx={{ display: "inline-block", mx: "2px", transform: "scale(0.8)" }}
+    >
+      •
+    </Box>
+  );
 
   const clickButtonGetAPI = (e) => {
     e.preventDefault();
@@ -313,57 +329,138 @@ function App() {
       </div>
       <main className="main">
         <form className="form">
-          <div className="blockAuth">
-            <div className="block">
-              <p>Адрес сервера zabbix</p>
-              <input className="serviceName"></input>
-            </div>
-            <div className="block">
-              <p>Имя пользователя с правами администратора</p>
-              <input className="serviceName"></input>
-            </div>
-            <div className="block">
-              <p>Пароль от пользователя</p>
-              <input className="serviceName"></input>
-            </div>
-            <div className="blockButton">
-              <button onClick={(e) => clickButtonGetAPI(e)} className="button">
-                проверка связи с сервером zabbix
-              </button>
-              <button
-                onClick={(e) => clickButtonGetAllHosts(e)}
-                className="button"
+          <Card sx={{ minWidth: 275 }}>
+            <CardContent>
+              <Typography
+                gutterBottom
+                sx={{ color: "text.secondary", fontSize: 14 }}
               >
-                Выгрузить все хосты
-              </button>
+                Настройки подключения к zabbix
+              </Typography>
+            <Box
+            component="form"
+            sx={{ "& > :not(style)": { marginBottom: 1, width: "25ch" } }}
+            noValidate
+            autoComplete="off"
+          >
+            <div>
+              <TextField
+                id="outlined-basic"
+                size="small"
+                label="Имя пользователя"
+                variant="outlined"
+                sx={{ width: "200px", height: "40px" }} // Указываем размеры
+              />
             </div>
-          </div>
-          <div className="blockTag">
-            <div className="block">
-              <p>Наименование тега</p>
-              <input className="serviceName"></input>
+            <div>
+              <TextField
+                id="outlined-basic"
+                size="small"
+                label="Пароль"
+                variant="outlined"
+              />
             </div>
-            <div className="block">
-              <p>Значение тега</p>
-              <input className="serviceName"></input>
+            <div>
+              <TextField
+                id="outlined-basic"
+                size="small"
+                label="Адрес сервера"
+                variant="outlined"
+              />
             </div>
-            <button
+
+          </Box>
+            </CardContent>
+            <CardActions>
+              <Button onClick={(e) => clickButtonGetAPI(e)} size="small" variant="outlined">
+                Проверка связи
+              </Button>
+            </CardActions>
+          </Card>
+          <Box
+            component="form"
+            sx={{ "& > :not(style)": { m: 1, width: "25ch" } }}
+            noValidate
+            autoComplete="off"
+          >
+            <div>
+              <TextField
+                id="outlined-basic"
+                size="small"
+                label="Имя пользователя"
+                variant="outlined"
+              />
+            </div>
+            <div>
+              <TextField
+                id="outlined-basic"
+                size="small"
+                label="Пароль"
+                variant="outlined"
+              />
+            </div>
+            <div>
+              <TextField
+                id="outlined-basic"
+                size="small"
+                label="Адрес сервера"
+                variant="outlined"
+              />
+            </div>
+            <Button onClick={(e) => clickButtonGetAPI(e)} size="small" variant="outlined">
+              Проверка связи
+            </Button>
+          </Box>
+          <Box
+            component="form"
+            sx={{ "& > :not(style)": { m: 1, width: "25ch" } }}
+            noValidate
+            autoComplete="off"
+          >
+            <div>
+              <TextField
+                id="outlined-basic"
+                size="small"
+                label="Наименование тега"
+                variant="outlined"
+              />
+            </div>
+            <div>
+              <TextField
+                id="outlined-basic"
+                size="small"
+                label="Значение тега"
+                variant="outlined"
+              />
+            </div>
+            <Button
+              onClick={(e) => clickButtonGetAllHosts(e)}
+              size="small"
+              variant="outlined"
+            >
+              Выгрузить все хосты
+            </Button>
+            <Button
               onClick={(e) => clickButtonGetAllHostsByTag(e)}
-              className="button"
+              size="small"
+              variant="outlined"
             >
               Выгрузить хосты по наименования тега
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={(e) => clickButtonGetAllTriggers(e)}
-              className="button"
+              size="small"
+              variant="outlined"
             >
               Выгрузить триггеры по наименования тега
-            </button>
-          </div>
+            </Button>
+          </Box>
         </form>
         <div className="table">
           <TableData dataZabbix={dataZabbix} />
-          <button className="buttonExportToExcel" onClick={exportToExcel}>Export in Excel</button>
+          <button className="buttonExportToExcel" onClick={exportToExcel}>
+            Export in Excel
+          </button>
         </div>
       </main>
     </>
