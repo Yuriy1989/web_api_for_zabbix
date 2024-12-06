@@ -16,7 +16,7 @@ class Api {
         jsonrpc:"2.0",
         method: "user.login",
         params: {
-          username: `${data.name}`,
+          username: `${data.userName}`,
           password: `${data.password}`,
         },
         id: 1,

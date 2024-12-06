@@ -15,22 +15,19 @@ import TableData from "../table/Table";
 
 function App() {
   const [dataZabbix, setDataZabbix] = useState();
-
-  const bull = (
-    <Box
-      component="span"
-      sx={{ display: "inline-block", mx: "2px", transform: "scale(0.8)" }}
-    >
-      •
-    </Box>
-  );
+  const [server, setServer] = useState('http://192.168.2.36:8080/api_jsonrpc.php');
+  const [userName, setUserName] = useState('Admin');
+  const [password, setPassword] = useState('zabbix');
+  const [nameService, setNameService] = useState();
+  const [valueService, setValueService] = useState();
 
   const clickButtonGetAPI = (e) => {
     e.preventDefault();
-    console.log("clickButtonGetAPI");
+    console.log("clickButtonGetAPI", password);
     const data = {
-      name: "Admin",
-      password: "zabbix",
+      userName: userName,
+      password: password,
+      server: server
     };
     api
       .getApi(data)
@@ -328,134 +325,153 @@ function App() {
         </header>
       </div>
       <main className="main">
-        <form className="form">
+        <div className="form">
           <Card sx={{ minWidth: 275 }}>
             <CardContent>
               <Typography
                 gutterBottom
                 sx={{ color: "text.secondary", fontSize: 14 }}
               >
-                Настройки подключения к zabbix
+                Настройки подключения
               </Typography>
-            <Box
-            component="form"
-            sx={{ "& > :not(style)": { marginBottom: 1, width: "25ch" } }}
-            noValidate
-            autoComplete="off"
-          >
-            <div>
-              <TextField
-                id="outlined-basic"
+              <Box
+                component="form"
+                sx={{ "& > :not(style)": { marginBottom: 1, width: "25ch" } }}
+                noValidate
+                autoComplete="off"
+              >
+                <div>
+                  <TextField
+                    // id="outlined-basic"
+                    size="small"
+                    label="Адрес сервера"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiInputBase-input": { fontSize: "12px" }, // Уменьшаем размер текста и внутренний отступ
+                      "& .MuiInputLabel-root": { fontSize: "12px" }, // Уменьшаем размер текста лейбла
+                    }}
+                    onChange={(e) => setServer(e.target.value)} // Обновляем состояние при изменении
+                  />
+                </div>
+                <div>
+                  <TextField
+                    // id="outlined-basic"
+                    size="small"
+                    label="Имя пользователя"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiInputBase-input": { fontSize: "12px" }, // Уменьшаем размер текста и внутренний отступ
+                      "& .MuiInputLabel-root": { fontSize: "12px" }, // Уменьшаем размер текста лейбла
+                    }}
+                    onChange={(e) => setUserName(e.target.value)} // Обновляем состояние при изменении
+                  />
+                </div>
+                <div>
+                  <TextField
+                    // id="outlined-basic"
+                    size="small"
+                    label="Пароль"
+                    type="password"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiInputBase-input": { fontSize: "12px" }, // Уменьшаем размер текста и внутренний отступ
+                      "& .MuiInputLabel-root": { fontSize: "12px" }, // Уменьшаем размер текста лейбла
+                    }}
+                    onChange={(e) => setPassword(e.target.value)} // Обновляем состояние при изменении
+                  />
+                </div>
+              </Box>
+              <Button
+                onClick={(e) => clickButtonGetAPI(e)}
                 size="small"
-                label="Имя пользователя"
                 variant="outlined"
-                sx={{ width: "200px", height: "40px" }} // Указываем размеры
-              />
-            </div>
-            <div>
-              <TextField
-                id="outlined-basic"
-                size="small"
-                label="Пароль"
-                variant="outlined"
-              />
-            </div>
-            <div>
-              <TextField
-                id="outlined-basic"
-                size="small"
-                label="Адрес сервера"
-                variant="outlined"
-              />
-            </div>
-
-          </Box>
-            </CardContent>
-            <CardActions>
-              <Button onClick={(e) => clickButtonGetAPI(e)} size="small" variant="outlined">
+                sx={{ fontSize: "10px", padding: "1px 1px" }}
+              >
                 Проверка связи
               </Button>
-            </CardActions>
+              <Button
+                onClick={(e) => clickButtonGetAllHosts(e)}
+                size="small"
+                variant="outlined"
+                sx={{
+                  marginLeft: 1,
+                  fontSize: "10px", // Уменьшает размер текста
+                  padding: "1px 1px", // Уменьшает внутренние отступы
+                }}
+              >
+                Выгрузить все хосты
+              </Button>
+            </CardContent>
           </Card>
-          <Box
-            component="form"
-            sx={{ "& > :not(style)": { m: 1, width: "25ch" } }}
-            noValidate
-            autoComplete="off"
-          >
-            <div>
-              <TextField
-                id="outlined-basic"
-                size="small"
-                label="Имя пользователя"
-                variant="outlined"
-              />
-            </div>
-            <div>
-              <TextField
-                id="outlined-basic"
-                size="small"
-                label="Пароль"
-                variant="outlined"
-              />
-            </div>
-            <div>
-              <TextField
-                id="outlined-basic"
-                size="small"
-                label="Адрес сервера"
-                variant="outlined"
-              />
-            </div>
-            <Button onClick={(e) => clickButtonGetAPI(e)} size="small" variant="outlined">
-              Проверка связи
-            </Button>
-          </Box>
-          <Box
-            component="form"
-            sx={{ "& > :not(style)": { m: 1, width: "25ch" } }}
-            noValidate
-            autoComplete="off"
-          >
-            <div>
-              <TextField
-                id="outlined-basic"
-                size="small"
-                label="Наименование тега"
-                variant="outlined"
-              />
-            </div>
-            <div>
-              <TextField
-                id="outlined-basic"
-                size="small"
-                label="Значение тега"
-                variant="outlined"
-              />
-            </div>
-            <Button
-              onClick={(e) => clickButtonGetAllHosts(e)}
-              size="small"
-              variant="outlined"
-            >
-              Выгрузить все хосты
-            </Button>
-            <Button
-              onClick={(e) => clickButtonGetAllHostsByTag(e)}
-              size="small"
-              variant="outlined"
-            >
-              Выгрузить хосты по наименования тега
-            </Button>
-            <Button
-              onClick={(e) => clickButtonGetAllTriggers(e)}
-              size="small"
-              variant="outlined"
-            >
-              Выгрузить триггеры по наименования тега
-            </Button>
-          </Box>
-        </form>
+          <Card sx={{ ml: 2, minWidth: 275 }}>
+            <CardContent>
+              <Typography
+                gutterBottom
+                sx={{ color: "text.secondary", fontSize: 14 }}
+              >
+                Параметры запроса
+              </Typography>
+              <Box
+                component="form"
+                sx={{ "& > :not(style)": { marginBottom: 1, width: "25ch" } }}
+                noValidate
+                autoComplete="off"
+              >
+                <div>
+                  <TextField
+                    // id="outlined-basic"
+                    size="small"
+                    label="Наименование тега"
+                    variant="outlined"
+                    sx={{
+                      "& .MuiInputBase-input": { fontSize: "12px" }, // Уменьшаем размер текста и внутренний отступ
+                      "& .MuiInputLabel-root": { fontSize: "12px" }, // Уменьшаем размер текста лейбла
+                    }}
+                    onChange={(e) => setNameService(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <TextField
+                    multiline
+                    rows={4}
+                    // id="outlined-basic"
+                    size="small"
+                    label="Значение тега"
+                    variant="outlined"
+                    sx={{
+                      width: "285px", // Устанавливаем ширину
+                      "& .MuiInputBase-input": { fontSize: "12px" }, // Уменьшаем размер текста и внутренний отступ
+                      "& .MuiInputLabel-root": { fontSize: "12px" }, // Уменьшаем размер текста лейбла
+                    }}
+                  />
+                </div>
+                <Button
+                  onClick={(e) => clickButtonGetAllHostsByTag(e)}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    fontSize: "10px", // Уменьшает размер текста
+                    padding: "1px 1px", // Уменьшает внутренние отступы
+                  }}
+                >
+                  Выгрузить хосты
+                </Button>
+                <Button
+                  onClick={(e) => clickButtonGetAllTriggers(e)}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    marginLeft: 1,
+                    fontSize: "10px", // Уменьшает размер текста
+                    padding: "1px 1px", // Уменьшает внутренние отступы
+                  }}
+                >
+                  Выгрузить триггеры
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        </div>
         <div className="table">
           <TableData dataZabbix={dataZabbix} />
           <button className="buttonExportToExcel" onClick={exportToExcel}>
