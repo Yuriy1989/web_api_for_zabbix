@@ -2,20 +2,9 @@
   text-align: center;
 }
 
-.App-logo {
-  height: 40px;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
 .App-header {
   background-color: #0e1d3a;
-  min-height: 10vh;
+  height: 50px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -26,7 +15,7 @@
 
 .main {
   /* background-color: #282c34; */
-  min-height: 90vh;
+  min-height: 95vh;
   display: flex;
   flex-direction: column;
   color: white;
@@ -53,7 +42,6 @@
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
-
 }
 
 .blockButton {

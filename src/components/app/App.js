@@ -1,25 +1,28 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
-import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
+import DownloadForOfflineIcon from '@mui/icons-material/DownloadForOffline';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import "./App.css";
 import { api } from "../utils/Api";
 import TableData from "../table/Table";
+import exportToExcelDefault from "../utils/exportToExcel";
 
 function App() {
   const [dataZabbix, setDataZabbix] = useState();
   const [server, setServer] = useState('http://192.168.2.36:8080/api_jsonrpc.php');
   const [userName, setUserName] = useState('Admin');
   const [password, setPassword] = useState('zabbix');
-  const [nameService, setNameService] = useState();
-  const [valueService, setValueService] = useState();
+  const [nameService, setNameService] = useState('service');
+  const [valueService, setValueService] = useState('home');
+  const [load, setLoad] = useState(false);
 
   const clickButtonGetAPI = (e) => {
     e.preventDefault();
@@ -62,15 +65,15 @@ function App() {
     e.preventDefault();
     console.log("clickButtonGetAllHostsByTag");
     const data = {
-      name: "Admin",
-      password: "zabbix",
+      userName: userName,
+      password: password,
     };
     api
       .getApi(data)
       .then((res) => {
         console.log("res", res);
         api
-          .getAllHostsByService(res.result, "service", "home")
+          .getAllHostsByService(res.result, nameService, valueService)
           .then((res) => {
             console.log("clickButtonGetAllHostsByTag", res);
           })
@@ -114,6 +117,8 @@ function App() {
       "site-order",
     ];
 
+    console.log('nameService', nameService);
+
     // Храним все обещания для запросов
     const requests = services.map((service) =>
       api
@@ -147,18 +152,21 @@ function App() {
           console.log(test);
 
           setDataZabbix(test);
+          setLoad(false);
         });
       })
       .catch((error) => {
+        setLoad(false);
         console.error("Общая ошибка выполнения запросов:", error);
       });
   };
 
   const clickButtonGetAllTriggers = (e) => {
+    setLoad(true);
     e.preventDefault();
     const data = {
-      name: "Admin",
-      password: "zabbix",
+      userName: userName,
+      password: password,
     };
     api
       .getApi(data)
@@ -317,6 +325,10 @@ function App() {
     });
   };
 
+  const exportToExcelDefaultService = () => {
+    exportToExcelDefault(dataZabbix)
+  }
+
   return (
     <>
       <div className="App">
@@ -443,6 +455,7 @@ function App() {
                       "& .MuiInputBase-input": { fontSize: "12px" }, // Уменьшаем размер текста и внутренний отступ
                       "& .MuiInputLabel-root": { fontSize: "12px" }, // Уменьшаем размер текста лейбла
                     }}
+                    onChange={(e) => setValueService(e.target.value)} // Обновляем состояние при изменении
                   />
                 </div>
                 <Button
@@ -472,12 +485,38 @@ function App() {
             </CardContent>
           </Card>
         </div>
-        <div className="table">
-          <TableData dataZabbix={dataZabbix} />
-          <button className="buttonExportToExcel" onClick={exportToExcel}>
-            Export in Excel
-          </button>
-        </div>
+        {load && (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        )}
+        {dataZabbix && (
+          <div className="table">
+            <TableData dataZabbix={dataZabbix} />
+            <Button
+              variant="outlined"
+              onClick={exportToExcel}
+              disabled={!dataZabbix || dataZabbix.length === 0}
+              startIcon={<DownloadForOfflineIcon />}
+            >
+              Export in Excel
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={exportToExcelDefaultService}
+              disabled={!dataZabbix || dataZabbix.length === 0}
+              startIcon={<DownloadForOfflineIcon />}
+            >
+              TEST Export in Excel
+            </Button>
+          </div>
+        )}
       </main>
     </>
   );
