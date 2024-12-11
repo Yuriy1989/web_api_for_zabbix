@@ -2,7 +2,7 @@ import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
 
 const exportToExcelDefault = (dataZabbix) => {
-  console.log('dataZabbix', dataZabbix);
+  console.log("dataZabbix", dataZabbix);
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Triggers");
 
@@ -19,18 +19,39 @@ const exportToExcelDefault = (dataZabbix) => {
     { header: "Примечание по триггеру", key: "triggerComments", width: 20 },
   ];
 
-  const dataHeader = Object.keys(dataZabbix[0]).map((item) => ({
-    header: item,
-    key: item,
-  }));
+  // Объединение заголовков
+  worksheet.mergeCells("A1:C1"); // Объединение A1 до C1
+  worksheet.getCell("A1").value = "Информация о хостах"; // Заголовок для объединенных колонок
+  worksheet.getCell("A1").alignment = {
+    horizontal: "center",
+    vertical: "middle",
+  };
 
-  console.log('dataHeader', dataHeader);
+  worksheet.mergeCells("D1:I1"); // Объединение D1 до I1
+  worksheet.getCell("D1").value = "Информация о триггерах"; // Заголовок для объединенных колонок
+  worksheet.getCell("D1").alignment = {
+    horizontal: "center",
+    vertical: "middle",
+  };
 
-  worksheet.columns = [
-
+  // Устанавливаем значения заголовков для нижнего уровня (в строке 2)
+  worksheet.getRow(2).values = [
+    "Наименование host",
+    "Примечание по host",
+    "Описание tags по host",
+    "Приоритет",
+    "Описание trigger",
+    "triggerid",
+    "expression",
+    "status (0 - антивен, 1 - выключен)",
+    "Примечание по триггеру",
   ];
 
-  // Данные для таблицы
+  // Стилизация заголовков
+  worksheet.getRow(1).font = { bold: true, size: 12 }; // Верхний уровень заголовков
+  worksheet.getRow(2).font = { bold: true, size: 10 }; // Подзаголовки
+
+  // Добавление данных
   const data = dataZabbix.map(
     ({
       comments,

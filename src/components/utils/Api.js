@@ -9,7 +9,8 @@ class Api {
   }
 
   getApi(data) {
-    return fetch(`${this._baseUrl}`, {
+    console.log("API data", data);
+    return fetch(`${data.server}`, {
       method: 'POST',
       headers: this._headers,
       body: JSON.stringify({
@@ -23,18 +24,18 @@ class Api {
       })
     })
      .then(res => this._getResponse(res))
-     .catch(console.log)
+    //  .catch(console.log)
   }
 
-  getAllHosts(authToken) {
-    return fetch(`${this._baseUrl}`, {
+  getAllHosts(authToken, data) {
+    return fetch(`${data.server}`, {
       method: "POST",
       headers: this._headers,
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "host.get",
         params: {
-          output: ["hostid", "host", "name"], // Какие поля выгружать
+          // output: ["hostid", "host", "name"], // Какие поля выгружать
           selectInterfaces: ["interfaceid", "ip"], // Дополнительно можно выбрать интерфейсы
         },
         auth: `${authToken}`,
@@ -45,8 +46,9 @@ class Api {
     .catch(console.log)
   }
 
-  getAllHostsByService(authToken, nameTag, valueTag) {
-    return fetch(`${this._baseUrl}`, {
+  getAllHostsByService(authToken, server, nameTag, valueTag) {
+    // console.log(authToken, server, nameTag, valueTag);
+    return fetch(`${server}`, {
       method: "POST",
       headers: this._headers,
       body: JSON.stringify({
@@ -71,8 +73,8 @@ class Api {
       .catch(console.log);
   }
 
-  getAllTriggersByHost(authToken, hostIds) {
-    return fetch(`${this._baseUrl}`, {
+  getAllTriggersByHost(authToken, server, hostIds) {
+    return fetch(`${server}`, {
       method: "POST",
       headers: this._headers,
       body: JSON.stringify({
@@ -96,7 +98,7 @@ class Api {
 }
 
 export const api = new Api({
-  baseUrl: 'http://192.168.2.36:8080/api_jsonrpc.php',
+  // baseUrl: 'http://192.168.2.36:8080/api_jsonrpc.php',
   // baseUrl: 'https://zabbix.vseinstrumenti.ru/api_jsonrpc.php',
   headers: {
     'Content-Type': 'application/json',

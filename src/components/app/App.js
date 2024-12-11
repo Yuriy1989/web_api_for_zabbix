@@ -7,53 +7,62 @@ import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
-import DownloadForOfflineIcon from '@mui/icons-material/DownloadForOffline';
-import CircularProgress from '@mui/material/CircularProgress';
+import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
+import CircularProgress from "@mui/material/CircularProgress";
+import Alert from "@mui/material/Alert";
+import Stack from "@mui/material/Stack";
 
 import "./App.css";
 import { api } from "../utils/Api";
 import TableData from "../table/Table";
 import exportToExcelDefault from "../utils/exportToExcel";
+import TableDataHosts from "../table/TableHosts";
 
 function App() {
   const [dataZabbix, setDataZabbix] = useState();
-  const [server, setServer] = useState('http://192.168.2.36:8080/api_jsonrpc.php');
-  const [userName, setUserName] = useState('Admin');
-  const [password, setPassword] = useState('zabbix');
-  const [nameService, setNameService] = useState('service');
-  const [valueService, setValueService] = useState('home');
+  const [dataZabbixHosts, setDataZabbixHosts] = useState();
+  const [server, setServer] = useState(
+    "http://192.168.2.36:8080/api_jsonrpc.php"
+  );
+  const [userName, setUserName] = useState("Admin");
+  const [password, setPassword] = useState("zabbix");
+  const [nameService, setNameService] = useState("service");
+  const [valueService, setValueService] = useState("home");
   const [load, setLoad] = useState(false);
+  const [connect, setConnect] = useState();
 
-  const clickButtonGetAPI = (e) => {
+  const clickButtonGetToken = (e) => {
     e.preventDefault();
-    console.log("clickButtonGetAPI", password);
     const data = {
       userName: userName,
       password: password,
-      server: server
+      server: server,
     };
     api
       .getApi(data)
       .then((res) => {
-        console.log("res", res);
+        setConnect(res);
       })
-      .catch((res) => console.log(res));
+      .catch((res) => {
+        setConnect(res);
+      });
   };
 
   const clickButtonGetAllHosts = (e) => {
+    setDataZabbix(null);
     e.preventDefault();
-    console.log("clickButtonGetAllHosts");
     const data = {
-      name: "Admin",
-      password: "zabbix",
+      userName: userName,
+      password: password,
+      server: server,
     };
     api
       .getApi(data)
       .then((res) => {
-        console.log("res", res);
         api
-          .getAllHosts(res.result)
+          .getAllHosts(res.result, data)
           .then((res) => {
+            setDataZabbixHosts(res.result);
             console.log("clickButtonGetAllHosts", res);
           })
           .catch((res) => console.log(res));
@@ -67,13 +76,13 @@ function App() {
     const data = {
       userName: userName,
       password: password,
+      server: server,
     };
     api
       .getApi(data)
       .then((res) => {
-        console.log("res", res);
         api
-          .getAllHostsByService(res.result, nameService, valueService)
+          .getAllHostsByService(res.result, server, nameService, valueService)
           .then((res) => {
             console.log("clickButtonGetAllHostsByTag", res);
           })
@@ -117,12 +126,12 @@ function App() {
       "site-order",
     ];
 
-    console.log('nameService', nameService);
+    console.log("nameService", nameService);
 
     // Храним все обещания для запросов
     const requests = services.map((service) =>
       api
-        .getAllHostsByService(res.result, "service", service)
+        .getAllHostsByService(res.result, server, "service", service)
         .then((response) => ({ service, response }))
         .catch((error) => ({ service, error }))
     );
@@ -143,7 +152,7 @@ function App() {
         const hostIds = allHosts.map((host) => host.hostid);
 
         // Получение триггеров для всех хостов
-        api.getAllTriggersByHost(res.result, hostIds).then((ress) => {
+        api.getAllTriggersByHost(res.result, server, hostIds).then((ress) => {
           console.log("triggers = ", ress.result);
           console.log("hosts", allHosts);
 
@@ -162,19 +171,24 @@ function App() {
   };
 
   const clickButtonGetAllTriggers = (e) => {
+    setDataZabbixHosts(null);
     setLoad(true);
     e.preventDefault();
     const data = {
       userName: userName,
       password: password,
+      server: server,
     };
     api
       .getApi(data)
       .then((res) => {
-        console.log("res", res);
+        setLoad(false);
         performApiRequests(res);
       })
-      .catch((res) => console.log(res));
+      .catch((res) => {
+        setLoad(false);
+        console.log(res);
+      });
   };
 
   function mergeTagsIntoTriggers(hostsArray, triggersArray) {
@@ -326,8 +340,8 @@ function App() {
   };
 
   const exportToExcelDefaultService = () => {
-    exportToExcelDefault(dataZabbix)
-  }
+    exportToExcelDefault(dataZabbix);
+  };
 
   return (
     <>
@@ -394,7 +408,7 @@ function App() {
                 </div>
               </Box>
               <Button
-                onClick={(e) => clickButtonGetAPI(e)}
+                onClick={(e) => clickButtonGetToken(e)}
                 size="small"
                 variant="outlined"
                 sx={{ fontSize: "10px", padding: "1px 1px" }}
@@ -413,6 +427,17 @@ function App() {
               >
                 Выгрузить все хосты
               </Button>
+              <Stack sx={{ mt: 1, width: "100%" }}>
+                {connect?.result && (
+                  <Alert severity="success" sx={{ fontSize: "12px", padding: "0px" }}>Success {connect?.result}</Alert>
+                )}
+                {connect?.error && (
+                  <Alert severity="error" sx={{ fontSize: "12px", padding: "0px" }}>
+                    Error: {connect?.error?.code} {connect?.error?.message}{" "}
+                    {connect?.error?.data}
+                  </Alert>
+                )}
+              </Stack>
             </CardContent>
           </Card>
           <Card sx={{ ml: 2, minWidth: 275 }}>
@@ -496,24 +521,25 @@ function App() {
             <CircularProgress />
           </Box>
         )}
-        {dataZabbix && (
+        {(dataZabbix || dataZabbixHosts) && (
           <div className="table">
-            <TableData dataZabbix={dataZabbix} />
-            <Button
+            { dataZabbix && <TableData dataZabbix={dataZabbix} /> }
+            { dataZabbixHosts && <TableDataHosts dataZabbixHosts={dataZabbixHosts}/> }
+            {/* <Button
               variant="outlined"
               onClick={exportToExcel}
               disabled={!dataZabbix || dataZabbix.length === 0}
               startIcon={<DownloadForOfflineIcon />}
             >
               Export in Excel
-            </Button>
+            </Button> */}
             <Button
               variant="outlined"
               onClick={exportToExcelDefaultService}
-              disabled={!dataZabbix || dataZabbix.length === 0}
+              disabled={!dataZabbix || !dataZabbixHosts || dataZabbix.length === 0}
               startIcon={<DownloadForOfflineIcon />}
             >
-              TEST Export in Excel
+              Export in Excel
             </Button>
           </div>
         )}
