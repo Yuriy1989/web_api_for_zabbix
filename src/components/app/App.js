@@ -16,6 +16,7 @@ import "./App.css";
 import { api } from "../utils/Api";
 import TableData from "../table/Table";
 import exportToExcelDefault from "../utils/exportToExcel";
+import exportToExcelHosts from "../utils/exportToExcelHosts";
 import TableDataHosts from "../table/TableHosts";
 
 function App() {
@@ -28,23 +29,63 @@ function App() {
   const [password, setPassword] = useState("zabbix");
   const [nameService, setNameService] = useState("service");
   const [valueService, setValueService] = useState("home");
+  const [nameHostGroup, setValueNameHostGroup] = useState([]);
   const [load, setLoad] = useState(false);
   const [connect, setConnect] = useState();
 
-  const clickButtonGetToken = (e) => {
+  const clickButtonGetToken2 = async (e) => {
     e.preventDefault();
+    setLoad(true);
+
     const data = {
       userName: userName,
       password: password,
       server: server,
     };
+
+    try {
+      const res = await api.getApi(data);
+      console.log("Успешный ответ:", res);
+      setConnect({ status: "connected", data: res });
+    } catch (err) {
+      setConnect({
+        status: "error",
+        message: typeof err === "string" ? err : "Сервер недоступен",
+      });
+    } finally {
+      setLoad(false); // Снимаем флаг загрузки
+    }
+  };
+
+  const clickButtonGetToken = (e) => {
+    console.log('test');
+    e.preventDefault();
+    setLoad(true);
+
+    const data = {
+      userName: userName,
+      password: password,
+      server: server,
+    };
+
     api
       .getApi(data)
       .then((res) => {
-        setConnect(res);
+        console.log("clickButtonGetToken", res);
+        setConnect({ status: "connected", data: res });
+        setLoad(false); // Снимаем флаг загрузки
+        setConnect({
+          status: "successful",
+          message: res.result,
+        });
       })
-      .catch((res) => {
-        setConnect(res);
+      .catch((err) => {
+        setLoad(false); // Снимаем флаг загрузки
+        console.log(err)
+        setConnect({
+          status: "error",
+          message: err,
+        });
       });
   };
 
@@ -71,6 +112,8 @@ function App() {
   };
 
   const clickButtonGetAllHostsByTag = (e) => {
+    setDataZabbix();
+    setLoad(true);
     e.preventDefault();
     console.log("clickButtonGetAllHostsByTag");
     const data = {
@@ -78,17 +121,59 @@ function App() {
       password: password,
       server: server,
     };
+
     api
       .getApi(data)
       .then((res) => {
         api
           .getAllHostsByService(res.result, server, nameService, valueService)
           .then((res) => {
+            setDataZabbixHosts(res.result);
             console.log("clickButtonGetAllHostsByTag", res);
+            setLoad(false);
           })
-          .catch((res) => console.log(res));
+          .catch((res) => {
+            setLoad(false);
+            console.log(res)
+          });
       })
-      .catch((res) => console.log(res));
+      .catch((res) => {
+        setLoad(false);
+        console.log(res)}
+      );
+  };
+
+  const clickButtonGetAllHostsByNameHostGroup = (e) => {
+    setDataZabbix();
+    setDataZabbixHosts();
+    setLoad(true);
+    e.preventDefault();
+    console.log("clickButtonGetAllHostsByNameHostGroup");
+    const data = {
+      userName: userName,
+      password: password,
+      server: server,
+    };
+
+    api
+      .getApi(data)
+      .then((res) => {
+        api
+          .getGroupIdByNameGroup(res.result, nameHostGroup, server)
+          .then((res) => {
+            // setDataZabbixHosts(res.result);
+            console.log("clickButtonGetAllHostsByNameHostGroup", res);
+            setLoad(false);
+          })
+          .catch((res) => {
+            setLoad(false);
+            console.log(res)
+          });
+      })
+      .catch((res) => {
+        setLoad(false);
+        console.log(res)}
+      );
   };
 
   const performApiRequests = (res) => {
@@ -153,14 +238,10 @@ function App() {
 
         // Получение триггеров для всех хостов
         api.getAllTriggersByHost(res.result, server, hostIds).then((ress) => {
-          console.log("triggers = ", ress.result);
-          console.log("hosts", allHosts);
-
           // Создаем объект для быстрого поиска тегов по hostid
-          const test = mergeTagsIntoTriggers(allHosts, ress.result);
-          console.log(test);
-
-          setDataZabbix(test);
+          const triggers = mergeTagsIntoTriggers(allHosts, ress.result);
+          setDataZabbix(triggers);
+          console.log('triggers', triggers);
           setLoad(false);
         });
       })
@@ -171,22 +252,22 @@ function App() {
   };
 
   const clickButtonGetAllTriggers = (e) => {
-    setDataZabbixHosts(null);
+    setDataZabbixHosts();
     setLoad(true);
     e.preventDefault();
+
     const data = {
       userName: userName,
       password: password,
       server: server,
     };
+
     api
       .getApi(data)
       .then((res) => {
-        setLoad(false);
         performApiRequests(res);
       })
       .catch((res) => {
-        setLoad(false);
         console.log(res);
       });
   };
@@ -340,7 +421,12 @@ function App() {
   };
 
   const exportToExcelDefaultService = () => {
-    exportToExcelDefault(dataZabbix);
+    if(dataZabbix) {
+      exportToExcelDefault(dataZabbix);
+    } else {
+      console.log('exportToExcelHosts');
+      exportToExcelHosts(dataZabbixHosts);
+    }
   };
 
   return (
@@ -368,7 +454,6 @@ function App() {
               >
                 <div>
                   <TextField
-                    // id="outlined-basic"
                     size="small"
                     label="Адрес сервера"
                     variant="outlined"
@@ -381,7 +466,6 @@ function App() {
                 </div>
                 <div>
                   <TextField
-                    // id="outlined-basic"
                     size="small"
                     label="Имя пользователя"
                     variant="outlined"
@@ -394,7 +478,6 @@ function App() {
                 </div>
                 <div>
                   <TextField
-                    // id="outlined-basic"
                     size="small"
                     label="Пароль"
                     type="password"
@@ -428,13 +511,20 @@ function App() {
                 Выгрузить все хосты
               </Button>
               <Stack sx={{ mt: 1, width: "100%" }}>
-                {connect?.result && (
-                  <Alert severity="success" sx={{ fontSize: "12px", padding: "0px" }}>Success {connect?.result}</Alert>
+                {connect?.status === "successful" && (
+                  <Alert
+                    severity="success"
+                    sx={{ fontSize: "12px", padding: "0px" }}
+                  >
+                    {connect?.status} {connect?.message}
+                  </Alert>
                 )}
-                {connect?.error && (
-                  <Alert severity="error" sx={{ fontSize: "12px", padding: "0px" }}>
-                    Error: {connect?.error?.code} {connect?.error?.message}{" "}
-                    {connect?.error?.data}
+                {connect?.status === "error" && (
+                  <Alert
+                    severity="error"
+                    sx={{ fontSize: "12px", padding: "0px" }}
+                  >
+                    {connect?.status} {connect?.message}
                   </Alert>
                 )}
               </Stack>
@@ -446,7 +536,7 @@ function App() {
                 gutterBottom
                 sx={{ color: "text.secondary", fontSize: 14 }}
               >
-                Параметры запроса
+                Поиск по tags
               </Typography>
               <Box
                 component="form"
@@ -509,6 +599,62 @@ function App() {
               </Box>
             </CardContent>
           </Card>
+          <Card sx={{ ml: 2, minWidth: 275 }}>
+            <CardContent>
+              <Typography
+                gutterBottom
+                sx={{ color: "text.secondary", fontSize: 14 }}
+              >
+                Поиск по Host group
+              </Typography>
+              <Box
+                component="form"
+                sx={{ "& > :not(style)": { marginBottom: 1, width: "25ch" } }}
+                noValidate
+                autoComplete="off"
+              >
+                <div>
+                  <TextField
+                    multiline
+                    rows={4}
+                    // id="outlined-basic"
+                    size="small"
+                    label="Наименование групп(ы)"
+                    variant="outlined"
+                    sx={{
+                      width: "285px", // Устанавливаем ширину
+                      "& .MuiInputBase-input": { fontSize: "12px" }, // Уменьшаем размер текста и внутренний отступ
+                      "& .MuiInputLabel-root": { fontSize: "12px" }, // Уменьшаем размер текста лейбла
+                    }}
+                    onChange={(e) => setValueNameHostGroup(e.target.value)} // Обновляем состояние при изменении
+                  />
+                </div>
+                <Button
+                  onClick={(e) => clickButtonGetAllHostsByNameHostGroup(e)}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    fontSize: "10px", // Уменьшает размер текста
+                    padding: "1px 1px", // Уменьшает внутренние отступы
+                  }}
+                >
+                  Выгрузить хосты
+                </Button>
+                <Button
+                  onClick={(e) => clickButtonGetAllTriggers(e)}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    marginLeft: 1,
+                    fontSize: "10px", // Уменьшает размер текста
+                    padding: "1px 1px", // Уменьшает внутренние отступы
+                  }}
+                >
+                  Выгрузить триггеры
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
         </div>
         {load && (
           <Box
@@ -523,20 +669,16 @@ function App() {
         )}
         {(dataZabbix || dataZabbixHosts) && (
           <div className="table">
-            { dataZabbix && <TableData dataZabbix={dataZabbix} /> }
-            { dataZabbixHosts && <TableDataHosts dataZabbixHosts={dataZabbixHosts}/> }
-            {/* <Button
-              variant="outlined"
-              onClick={exportToExcel}
-              disabled={!dataZabbix || dataZabbix.length === 0}
-              startIcon={<DownloadForOfflineIcon />}
-            >
-              Export in Excel
-            </Button> */}
+            {dataZabbix && <TableData dataZabbix={dataZabbix} />}
+            {dataZabbixHosts && (
+              <TableDataHosts dataZabbixHosts={dataZabbixHosts} />
+            )}
             <Button
               variant="outlined"
               onClick={exportToExcelDefaultService}
-              disabled={!dataZabbix || !dataZabbixHosts || dataZabbix.length === 0}
+              disabled={
+                (!dataZabbix  || dataZabbix.length === 0) && (!dataZabbixHosts || dataZabbixHosts.length === 0)
+              }
               startIcon={<DownloadForOfflineIcon />}
             >
               Export in Excel

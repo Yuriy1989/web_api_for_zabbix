@@ -2,7 +2,7 @@ import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
 
 const exportToExcelDefault = (dataZabbix) => {
-  console.log("dataZabbix", dataZabbix);
+  console.log("dataZabbix----", dataZabbix);
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Triggers");
 

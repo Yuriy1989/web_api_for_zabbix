@@ -8,7 +8,7 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 
 const TableDataHosts = ({ dataZabbixHosts = [] }) => {
-  console.log('dataZabbixHosts', dataZabbixHosts);
+  console.log("dataZabbixHosts", dataZabbixHosts);
   const StyledTableCell = styled(TableCell)(({ theme }) => ({
     [`&.${tableCellClasses.head}`]: {
       backgroundColor: theme.palette.common.black,
@@ -62,6 +62,9 @@ const TableDataHosts = ({ dataZabbixHosts = [] }) => {
               <StyledTableCell align="center" sx={{ width: "20%" }}>
                 description
               </StyledTableCell>
+              <StyledTableCell align="center" sx={{ width: "20%" }}>
+                tags
+              </StyledTableCell>
               <StyledTableCell align="center" sx={{ width: "10%" }}>
                 status
               </StyledTableCell>
@@ -81,12 +84,23 @@ const TableDataHosts = ({ dataZabbixHosts = [] }) => {
                   <StyledTableCell align="center">
                     {row?.hostid}
                   </StyledTableCell>
+                  <StyledTableCell align="center">{row?.name}</StyledTableCell>
                   <StyledTableCell align="center">
-                    {row?.name}
+                    {row?.interfaces?.[0]?.ip}
                   </StyledTableCell>
-                  <StyledTableCell align="left">{row?.interfaces[0]?.ip}</StyledTableCell>
-                  <StyledTableCell align="left">{row?.description}</StyledTableCell>
-                  <StyledTableCell align="left">{row?.triggerid}</StyledTableCell>
+                  <StyledTableCell align="left">
+                    {row?.description}
+                  </StyledTableCell>
+                  <StyledTableCell align="left">
+                    {Array.isArray(row.tags)
+                      ? row.tags
+                          .map((item) => `${item.tag}: ${item.value}`)
+                          .join(", ")
+                      : "-"}
+                  </StyledTableCell>
+                  <StyledTableCell align="center">
+                    {row?.status}
+                  </StyledTableCell>
                 </StyledTableRow>
               ))
             ) : (

@@ -53,7 +53,7 @@ const TableData = ({ dataZabbix = [] }) => {
                 Примечание по host
               </StyledTableCell>
               <StyledTableCell align="center" sx={{ width: "15%" }}>
-                Описание tags по host
+                tags по host
               </StyledTableCell>
               <StyledTableCell align="center" sx={{ width: "5%" }}>
                 Приоритет
@@ -62,13 +62,13 @@ const TableData = ({ dataZabbix = [] }) => {
                 Описание trigger
               </StyledTableCell>
               <StyledTableCell align="center" sx={{ width: "10%" }}>
-                triggerid
+                tags по trigger
               </StyledTableCell>
               <StyledTableCell align="center" sx={{ width: "10%" }}>
                 expression
               </StyledTableCell>
-              <StyledTableCell align="center" sx={{ width: "10%" }}>
-                status (0 - антивен, 1 - выключен)
+              <StyledTableCell align="center" sx={{ width: "20%" }}>
+                status
               </StyledTableCell>
               <StyledTableCell align="center" sx={{ width: "10%" }}>
                 Примечание по триггеру
@@ -85,19 +85,41 @@ const TableData = ({ dataZabbix = [] }) => {
                   <StyledTableCell align="center" component="th" scope="row">
                     {index + 1}
                   </StyledTableCell>
-                  <StyledTableCell align="center">{row?.hosts?.[0]?.name}</StyledTableCell>
                   <StyledTableCell align="center">
-                    {row?.hosts?.[0]?.description}
+                    {row?.hosts?.[0]?.name}
                   </StyledTableCell>
                   <StyledTableCell align="center">
                     {row?.hosts?.[0]?.description}
                   </StyledTableCell>
-                  <StyledTableCell align="center">{row?.status}</StyledTableCell>
-                  <StyledTableCell align="left">{row?.comments}</StyledTableCell>
-                  <StyledTableCell align="left">{row?.description}</StyledTableCell>
-                  <StyledTableCell align="left">{row?.triggerid}</StyledTableCell>
-                  <StyledTableCell align="left">{row?.expression}</StyledTableCell>
-                  <StyledTableCell align="left">{row?.comments}</StyledTableCell>
+                  <StyledTableCell align="center">
+                    {Array.isArray(row?.tags)
+                      ? row?.tags
+                          .map((item) => `${item.tag}: ${item.value}`)
+                          .join(", ")
+                      : "-"}
+                  </StyledTableCell>
+                  <StyledTableCell align="center">
+                    {row?.priority}
+                  </StyledTableCell>
+                  <StyledTableCell align="left">
+                    {row?.description}
+                  </StyledTableCell>
+                  <StyledTableCell align="center">
+                  {Array.isArray(row?.hosts?.[0]?.tags)
+                      ? row?.hosts?.[0]?.tags
+                          .map((item) => `${item.tag}: ${item.value}`)
+                          .join(", ")
+                      : "-"}
+                  </StyledTableCell>
+                  <StyledTableCell align="left">
+                    {row?.expression}
+                  </StyledTableCell>
+                  <StyledTableCell align="center">
+                    {row?.status}
+                  </StyledTableCell>
+                  <StyledTableCell align="left">
+                    {row?.comments}
+                  </StyledTableCell>
                 </StyledTableRow>
               ))
             ) : (
