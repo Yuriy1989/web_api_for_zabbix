@@ -11,6 +11,10 @@ import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Stack from "@mui/material/Stack";
+import FormControl from "@mui/material/FormControl";
+import MenuItem from "@mui/material/MenuItem";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
 
 import "./App.css";
 import { api } from "../utils/Api";
@@ -30,6 +34,7 @@ function App() {
   const [nameService, setNameService] = useState("service");
   const [valueService, setValueService] = useState("home");
   const [nameHostGroup, setValueNameHostGroup] = useState([]);
+  const [template, setTemplate] = useState("");
   const [load, setLoad] = useState(false);
   const [connect, setConnect] = useState();
 
@@ -58,7 +63,7 @@ function App() {
   };
 
   const clickButtonGetToken = (e) => {
-    console.log('test');
+    console.log("test");
     e.preventDefault();
     setLoad(true);
 
@@ -81,7 +86,7 @@ function App() {
       })
       .catch((err) => {
         setLoad(false); // Снимаем флаг загрузки
-        console.log(err)
+        console.log(err);
         setConnect({
           status: "error",
           message: err,
@@ -134,13 +139,17 @@ function App() {
           })
           .catch((res) => {
             setLoad(false);
-            console.log(res)
+            console.log(res);
           });
       })
       .catch((res) => {
         setLoad(false);
-        console.log(res)}
-      );
+        console.log(res);
+      });
+  };
+
+  const handleChange = (event) => {
+    setTemplate(event.target.value);
   };
 
   const clickButtonGetAllHostsByNameHostGroup = (e) => {
@@ -167,13 +176,17 @@ function App() {
           })
           .catch((res) => {
             setLoad(false);
-            console.log(res)
+            console.log(res);
           });
       })
       .catch((res) => {
         setLoad(false);
-        console.log(res)}
-      );
+        console.log(res);
+      });
+  };
+
+  const clickButtonAddHosts = () => {
+    console.log("clickButtonAddHosts");
   };
 
   const performApiRequests = (res) => {
@@ -241,7 +254,7 @@ function App() {
           // Создаем объект для быстрого поиска тегов по hostid
           const triggers = mergeTagsIntoTriggers(allHosts, ress.result);
           setDataZabbix(triggers);
-          console.log('triggers', triggers);
+          console.log("triggers", triggers);
           setLoad(false);
         });
       })
@@ -297,134 +310,11 @@ function App() {
     });
   }
 
-  const exportToExcel = () => {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Triggers");
-
-    // Определение колонок
-    worksheet.columns = [
-      { header: "Наименование host", key: "hostName", width: 20 },
-      { header: "Примечание по host", key: "hostDescription", width: 20 },
-      { header: "Описание tags по host", key: "hostTags", width: 20 },
-      { header: "Приоритет", key: "priority", width: 7 },
-      { header: "Описание trigger", key: "description", width: 50 },
-      { header: "triggerid", key: "triggerId", width: 7 },
-      { header: "expression", key: "expression", width: 50 },
-      { header: "status (0 - антивен, 1 - выключен)", key: "status", width: 7 },
-      { header: "Примечание по триггеру", key: "triggerComments", width: 20 },
-    ];
-
-    // Данные для таблицы
-    const data = dataZabbix.map(
-      ({
-        comments,
-        description,
-        expression,
-        hosts,
-        priority,
-        status,
-        triggerid,
-      }) => ({
-        hostName: hosts?.[0]?.name || "-",
-        hostDescription: hosts?.[0]?.description || "-",
-        hostTags: Array.isArray(hosts?.[0]?.tags)
-          ? hosts[0].tags.map((item) => `${item.tag}: ${item.value}`).join(", ")
-          : "-",
-        priority: Number(priority),
-        description: description,
-        triggerId: triggerid,
-        expression: expression,
-        status: status,
-        triggerComments: comments || "-",
-      })
-    );
-
-    // Добавление строк в таблицу
-    // Добавление строк в таблицу
-    data.forEach((row) => {
-      const newRow = worksheet.addRow(row);
-
-      // Перенос слов для каждой ячейки строки
-      newRow.eachCell((cell) => {
-        cell.alignment = { wrapText: true, vertical: "middle" }; // Перенос текста
-      });
-
-      // Условное форматирование для столбца "Приоритет"
-      const priorityCell = newRow.getCell("priority");
-      let priorityColor;
-
-      // Определяем цвет на основе значения
-      switch (priorityCell.value) {
-        case 1:
-          priorityColor = "FF87CEEB"; // Голубой
-          break;
-        case 2:
-          priorityColor = "FFFFFF00"; // Желтый
-          break;
-        case 3:
-          priorityColor = "FFFFA500"; // Оранжевый
-          break;
-        case 4:
-          priorityColor = "fc2d51"; // Светло-красный
-          break;
-        case 5:
-          priorityColor = "FFFF0000"; // Яркий красный
-          break;
-        default:
-          priorityColor = "FFFFFFFF"; // Белый
-          break;
-      }
-
-      // Применяем цвет к ячейке
-      priorityCell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: priorityColor },
-      };
-    });
-
-    // Применение стилей к шапке
-    const headerRow = worksheet.getRow(1);
-    headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 12 }; // Жирный шрифт, белый цвет
-      cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF4F81BD" }, // Синий фон
-      };
-      cell.alignment = {
-        horizontal: "center",
-        vertical: "middle",
-        wrapText: true,
-      }; // Центровка и перенос
-    });
-
-    // Добавление границ для всех ячеек
-    worksheet.eachRow((row) => {
-      row.eachCell((cell) => {
-        cell.border = {
-          top: { style: "thin" },
-          left: { style: "thin" },
-          bottom: { style: "thin" },
-          right: { style: "thin" },
-        };
-      });
-    });
-
-    // Сохранение файла
-    workbook.xlsx.writeBuffer().then((buffer) => {
-      saveAs(
-        new Blob([buffer], { type: "application/octet-stream" }),
-        "TriggersData.xlsx"
-      );
-    });
-  };
-
   const exportToExcelDefaultService = () => {
-    if(dataZabbix) {
+    if (dataZabbix) {
       exportToExcelDefault(dataZabbix);
     } else {
-      console.log('exportToExcelHosts');
+      console.log("exportToExcelHosts");
       exportToExcelHosts(dataZabbixHosts);
     }
   };
@@ -655,6 +545,78 @@ function App() {
               </Box>
             </CardContent>
           </Card>
+          <Card sx={{ ml: 2, minWidth: 275 }}>
+            <CardContent>
+              <Typography
+                gutterBottom
+                sx={{ color: "text.secondary", fontSize: 14 }}
+              >
+                Добавление Hosts
+              </Typography>
+              <Box
+                component="form"
+                sx={{ "& > :not(style)": { marginBottom: 1, width: "25ch" } }}
+                noValidate
+                autoComplete="off"
+              >
+                <div>
+                  <TextField
+                    multiline
+                    rows={4}
+                    size="small"
+                    label="Наименование host(s)"
+                    variant="outlined"
+                    sx={{
+                      width: "240px", // Устанавливаем ширину
+                      "& .MuiInputBase-input": { fontSize: "12px" }, // Уменьшаем размер текста и внутренний отступ
+                      "& .MuiInputLabel-root": { fontSize: "12px" }, // Уменьшаем размер текста лейбла
+                    }}
+                    onChange={(e) => setValueService(e.target.value)} // Обновляем состояние при изменении
+                  />
+
+                  <FormControl
+                    sx={{
+                      mt: 1,
+                      width: "240px", // Устанавливаем ширину
+                      "& .MuiInputBase-input": { fontSize: "12px" }, // Уменьшаем размер текста и внутренний отступ
+                      "& .MuiInputLabel-root": { fontSize: "12px" }, // Уменьшаем размер текста лейбла
+                    }}
+                    size="small"
+                  >
+                    <InputLabel id="demo-select-small-label">
+                      Template
+                    </InputLabel>
+                    <Select
+                      labelId="demo-select-small-label"
+                      id="demo-select-small"
+                      value={template}
+                      label="Age"
+                      onChange={handleChange}
+
+                    >
+                      <MenuItem sx={{ color: "text.secondary", fontSize: 12 }} value="">
+                        <em>None</em>
+                      </MenuItem>
+                      <MenuItem value={10}>Ten</MenuItem>
+                      <MenuItem value={20}>Twenty</MenuItem>
+                      <MenuItem value={30}>Thirty</MenuItem>
+                    </Select>
+                  </FormControl>
+                </div>
+                <Button
+                  onClick={clickButtonAddHosts}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    fontSize: "10px", // Уменьшает размер текста
+                    padding: "1px 1px", // Уменьшает внутренние отступы
+                  }}
+                >
+                  Добавить
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
         </div>
         {load && (
           <Box
@@ -677,7 +639,8 @@ function App() {
               variant="outlined"
               onClick={exportToExcelDefaultService}
               disabled={
-                (!dataZabbix  || dataZabbix.length === 0) && (!dataZabbixHosts || dataZabbixHosts.length === 0)
+                (!dataZabbix || dataZabbix.length === 0) &&
+                (!dataZabbixHosts || dataZabbixHosts.length === 0)
               }
               startIcon={<DownloadForOfflineIcon />}
             >
