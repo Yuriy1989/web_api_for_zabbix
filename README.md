@@ -19,4 +19,15 @@ version 1.0.0
 
 # Установка
 
-1. 
+1. Создайте каталог Module_1 в каталоге modules вашей установки внешнего интерфейса Zabbix (например, zabbix/ui/modules).
+2. Создайте файл manifest.json с метаданными базового модуля (см. описание поддерживаемых параметров).
+```json
+{
+    "manifest_version": 2.0,
+    "id": "my-address",
+    "name": "My IP Address",
+    "version": "1.0",
+    "namespace": "MyAddress",
+    "description": "My External IP Address."
+}
+```
