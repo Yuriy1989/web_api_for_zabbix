@@ -24,3 +24,4 @@ yarn-error.log*
 
 .codegpt
 .vscode
+.editorconfig
