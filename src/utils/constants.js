@@ -1,10 +1,10 @@
-// export const USER_NAME="DudinIuV";
-// export const PASSWORD="combRin2in^g";
-// export const ZABBIX_SERVER="https://zabbix.vseinstrumenti.ru/api_jsonrpc.php";
+export const USER_NAME="DudinIuV";
+export const PASSWORD="combRin2in^g";
+export const ZABBIX_SERVER="https://zabbix.vseinstrumenti.ru/api_jsonrpc.php";
 
-export const USER_NAME = "Admin";
-export const PASSWORD = "zabbix";
-export const ZABBIX_SERVER = "http://192.168.2.101:8080/api_jsonrpc.php";
+//export const USER_NAME = "Admin";
+//export const PASSWORD = "zabbix";
+//export const ZABBIX_SERVER = "http://192.168.2.101:8080/api_jsonrpc.php";
 
 export const URL_ZABBIX = "https://zabbix.vseinstrumenti.ru";
 export const ALERTS_FOR_ZABBIX = [
