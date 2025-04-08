@@ -20,11 +20,23 @@ sudo apt install docker-ce docker-compose -y
 ```bash
 git clone https://github.com/Yuriy1989/web_api_for_zabbix.git
 ```
-3. После этого необходимо собрать и запустить наше приложение.
-```bash
-docker-compose up --build
+3. Нужно указать учетную запись и адрес сервера zabbix для работы приложения в файле ./src/utils/constants.js
+```js
+export const USER_NAME = "Admin";
+export const PASSWORD = "zabbix";
+export const ZABBIX_SERVER = "http://192.168.2.4:8080/api_jsonrpc.php";
+export const URL_ZABBIX = "https://zabbix.home.ru"; //указать полное доменное имя адреса сервера
 ```
-4. Приложение будет доступно по IP адреса сервера на котором собрали наше приложение по порту 3001.
+4. После этого необходимо собрать и запустить наше приложение.
+```bash
+cd web_api_for_zabbix
+sudo docker-compose up --build
+```
+5. Приложение будет доступно по IP адреса сервера на котором собрали наше приложение по порту 3001.
+Если нужно пересобрать приложение сперва нужно убить запущенный контейнер командой:
+```bash
+sudo docker-compose down
+```
 
 # Подключение модуля в zabbix если необходимо интегрировать веб приложение в интерфейс zabbix (все действия проделываем на сервере zabbix).
 
