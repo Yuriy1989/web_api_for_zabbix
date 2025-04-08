@@ -1,0 +1,16 @@
+# Dist
+build
+dist
+
+# Deps
+node_modules
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# IDE Files
+.vscode
+
+# README и файлы лицензий
+README.md

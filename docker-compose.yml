@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  frontend:
+    container_name: frontendzabbix
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3001:3000'
+    restart: always

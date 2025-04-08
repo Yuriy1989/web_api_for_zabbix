@@ -1,23 +1,16 @@
 FROM node:18-alpine AS builder
-
 WORKDIR /app
-
 COPY package*.json ./
-
-RUN npm ci
-
+RUN npm ci --omit=dev --no-audit --no-fund
 COPY . ./
+RUN npm run build
 
-RUN npm run build \
-  && rm -rf ./src \
-  && rm -rf node ./node_modules
+# Очистка временных файлов и зависимостей, если они не нужны для следующего этапа
+RUN rm -rf ./src ./node_modules
 
-FROM node:18-alpine AS backend
+FROM nginx:alpine AS frontendzabix
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev --no-audit --no-fund && npm i -g pm2
-COPY --from=builder /app/dist ./dist
-COPY ./ecosystem.config.js ./
-EXPOSE 3001
-
-CMD [ "pm2-runtime", "start" ]
+COPY --from=builder /app/build /usr/share/nginx/html
+COPY ./nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
+EXPOSE 3000
+CMD [ "nginx", "-g", "daemon off;" ]

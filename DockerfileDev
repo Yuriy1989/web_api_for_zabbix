@@ -1,0 +1,6 @@
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
+COPY . ./
+CMD [ "npm", "run", "start" ]

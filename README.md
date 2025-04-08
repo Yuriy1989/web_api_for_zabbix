@@ -16,7 +16,15 @@ wget https://get.docker.com/ -O get-docker.sh
 sh get-docker.sh   
 sudo apt install docker-ce docker-compose -y 
 ```
-2. 
+2. Создаем папку под наш проект. Переходим в эту папку и клонируем репозиторий.
+```bash
+git clone https://github.com/Yuriy1989/web_api_for_zabbix.git
+```
+3. После этого необходимо собрать и запустить наше приложение.
+```bash
+docker-compose up --build
+```
+4. Приложение будет доступно по IP адреса сервера на котором собрали наше приложение по порту 3001.
 
 # Подключение модуля в zabbix если необходимо интегрировать веб приложение в интерфейс zabbix (все действия проделываем на сервере zabbix).
 
@@ -92,7 +100,7 @@ class ModuleClass extends CController {
 }
 ```
 7. Создайте новый каталог views в каталоге ModuleWebReact.
-Создайте файл module.views.php в каталоге views и определите представление модуля.
+Создайте файл module.views.php в каталоге views и определите представление модуля. ВАЖНО в переменную url необходимо указать адрес и порт нашего собранного приложения.
 ```php
 <?php 
 
