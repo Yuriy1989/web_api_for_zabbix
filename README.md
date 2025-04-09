@@ -37,6 +37,11 @@ sudo docker-compose up --build -d
 ```bash
 sudo docker-compose down
 ```
+Затем удалить склонированный проект
+```bash
+rm -rf web_api_for_zabbix/
+```
+Повторить шаги, начиная с шага № 2.
 
 # Подключение модуля в zabbix если необходимо интегрировать веб приложение в интерфейс zabbix (все действия проделываем на сервере zabbix).
 
