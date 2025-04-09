@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import dayjs from "dayjs";
-import 'dayjs/locale/ru'
+import "dayjs/locale/ru";
 import {
   Select,
   Space,
@@ -24,8 +24,15 @@ import {
 } from "recharts";
 import { api } from "../../utils/Api";
 import "./analysis.css"; // Подключаем стили
-import { ALERTS_FOR_ZABBIX, PASSWORD, SEVERITY_COLORS, SEVERITY_LABELS, URL_ZABBIX, USER_NAME, ZABBIX_SERVER } from "../../utils/constants";
-
+import {
+  ALERTS_FOR_ZABBIX,
+  PASSWORD,
+  SEVERITY_COLORS,
+  SEVERITY_LABELS,
+  URL_ZABBIX,
+  USER_NAME,
+  ZABBIX_SERVER,
+} from "../../utils/constants";
 
 const Analysis = () => {
   dayjs.locale("ru");
@@ -41,6 +48,7 @@ const Analysis = () => {
   const [token, setToken] = useState();
   const [dateDefaultForDatePicker, setDateDefaultForDatePicker] = useState(); // Выбранный промежуток времени
   const [alertsDataAll, setAlertsDataAll] = useState([]);
+  const [hostsByServices, setHostsByServices] = useState([]);
   const [selectedValues, setSelectedValues] = useState(defaultSelectedValues);
 
   const [loading, setLoading] = useState(false);
@@ -143,6 +151,11 @@ const Analysis = () => {
       key: "serviceName",
     },
     {
+      title: "Количество хостов",
+      dataIndex: "count",
+      key: "count",
+    },
+    {
       title: "Average",
       dataIndex: "Average",
       key: "Average",
@@ -227,7 +240,7 @@ const Analysis = () => {
   //Запрос на выгрузку все алертов за выбранный период
   const handleAlertMonth = async () => {
     if (selectedServices.length === 0) {
-      alert("Пожалуйста, выберите сервис.");
+      alert("Пожалуйста, выберите сервис!");
       return;
     }
     setLoading(true);
@@ -235,6 +248,7 @@ const Analysis = () => {
     try {
       let allHostIds = [];
       let alertsDataAll = []; // Инициализируем массив для всех алертов
+      let allHostsByServices = []; //кол-во хостов по сервисам
 
       //Преобразуем время в unix формат
       const selectedDatesUnixFormat = dateDefaultForDatePicker.map((date) =>
@@ -250,14 +264,20 @@ const Analysis = () => {
           service
         );
 
-        console.log(
-          "По сервису",
-          service,
-          "найдено",
-          hosts.result.length,
-          "hosts из них",
-          hosts.result
-        );
+        // console.log(
+        //   "По сервису",
+        //   service,
+        //   "найдено",
+        //   hosts.result.length,
+        //   "hosts из них",
+        //   hosts.result
+        // );
+
+        allHostsByServices = [
+          ...allHostsByServices,
+          { [`${service}`]: hosts.result.length },
+        ];
+        setHostsByServices(allHostsByServices);
 
         //Если хосты по данному сервису есть, запрашиваем по ним алерты
         if (hosts?.result) {
@@ -286,11 +306,12 @@ const Analysis = () => {
 
       // Убираем дубликаты хостов (если сервисы могут пересекаться)
       allHostIds = [...new Set(allHostIds)];
-
-      console.log("Итоговый список ID хостов:", allHostIds);
-      console.log("Итоговый массив алертов:", alertsDataAll);
+      // console.log("Итоговый список ID хостов:", allHostIds);
+      // console.log("Итоговый массив алертов:", alertsDataAll);
       setAlertsDataAll(alertsDataAll);
-      const tempRangeDate = `от ${dayjs(dateDefaultForDatePicker[0]).format("D MMMM YYYY")} до ${dayjs(dateDefaultForDatePicker[1]).format("D MMMM YYYY")}`;
+      const tempRangeDate = `от ${dayjs(dateDefaultForDatePicker[0]).format(
+        "D MMMM YYYY"
+      )} до ${dayjs(dateDefaultForDatePicker[1]).format("D MMMM YYYY")}`;
       setFormattedRange(tempRangeDate);
       setError(null);
       setLoading(false);
@@ -303,6 +324,7 @@ const Analysis = () => {
 
   const groupServicesBySeverity = (data) => {
     const result = {};
+    // console.log("data", data);
 
     data.forEach((alert) => {
       const service = alert.serviceName || "unknown";
@@ -317,18 +339,29 @@ const Analysis = () => {
       result[service][severityLabel]++;
     });
 
+    // console.log("result", result);
     return result;
   };
 
   const grouped = groupServicesBySeverity(alertsDataAll);
+  // console.log("grouped", grouped);
+
+  // Преобразуем массив с хостами в объект для более удобного поиска
+  const hostsObject = hostsByServices.reduce((acc, item) => {
+    const [key, value] = Object.entries(item)[0];
+    acc[key] = value;
+    return acc;
+  }, {});
 
   const tableData = Object.entries(grouped).map(
     ([serviceName, severities]) => ({
       key: serviceName,
       serviceName,
       ...severities,
+      count: hostsObject[serviceName], // Добавляем количество хостов для каждого сервиса
     })
   );
+  // console.log("tableData", tableData);
 
   // Функция для группировки данных по serviceName и датам
   const processAlertsData = (alertsDataAll) => {
@@ -400,6 +433,7 @@ const Analysis = () => {
       <Card
         title="Нажмите Загрузить, чтобы подгрузить сервисы из zabbix"
         size="small"
+        style={{ margin: "10px",}}
       >
         <Select
           size="small"
@@ -458,20 +492,7 @@ const Analysis = () => {
             );
           })}
         </Select>
-      </Card>
-      <Space
-        direction="vertical"
-        size="middle"
-        style={{
-          display: "flex",
-        }}
-      >
-        <Card title={formattedRange ? `Аналитика по алертам за период: ${formattedRange}`: ""} size="small">
-          {loading && (
-            <div className="loading-overlay">
-              <Spin size="large" />
-            </div>
-          )}
+        <div style={{ marginTop: "10px" }}>
           <Button
             type="primary"
             icon={<DownloadOutlined />}
@@ -481,11 +502,43 @@ const Analysis = () => {
             Выполнить запрос
           </Button>
           {error && <p style={{ color: "red" }}>{error}</p>}
-          <Table columns={columns_2} dataSource={tableData} pagination={false} />
+        </div>
+      </Card>
+      <Space
+        direction="vertical"
+        size="middle"
+        style={{
+          display: "flex",
+          margin: "10px",
+        }}
+      >
+        <Card
+          title={
+            formattedRange
+              ? `Аналитика по алертам за период: ${formattedRange}`
+              : ""
+          }
+          size="small"
+        >
+          {loading && (
+            <div className="loading-overlay">
+              <Spin size="large" />
+            </div>
+          )}
+
+          <Table
+            columns={columns_2}
+            dataSource={tableData}
+            pagination={false}
+          />
         </Card>
       </Space>
 
-      <Space direction="vertical" size="middle" style={{ display: "flex" }}>
+      <Space
+        direction="vertical"
+        size="middle"
+        style={{ display: "flex", margin: "10px" }}
+      >
         <Card title="Гистограмма количества алертов по сервисам" size="small">
           {loading && (
             <div className="loading-overlay">

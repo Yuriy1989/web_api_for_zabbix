@@ -7,6 +7,7 @@ import exportToExcelDefault from "../utils/exportToExcel";
 import exportToExcelHosts from "../utils/exportToExcelHosts";
 import TableDataHosts from "../components/table/TableHosts";
 import { PASSWORD, USER_NAME, ZABBIX_SERVER } from "../utils/constants";
+import "./reportServices.css"; // Подключаем стили
 const { Option } = Select;
 
 const ReportServices = () => {

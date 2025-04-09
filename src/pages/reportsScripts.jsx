@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Select, Space, Button, Card, Spin } from "antd";
+import { Select, Space, Button, Card, Spin, Switch  } from "antd";
 
 import { api } from "../utils/Api";
 import exportToExcelHostsWithScripts from "../utils/exportToExcelHostsWithScripts";
@@ -18,6 +18,11 @@ const ReportsScripts = () => {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [token, setToken] = useState();
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.toggle("dark-mode", darkMode);
+  }, [darkMode]);
 
   const exportToExcelDefaultService = () => {
     exportToExcelHostsWithScripts(dataZabbix);
@@ -96,6 +101,14 @@ const ReportsScripts = () => {
 
   return (
     <>
+    <div style={{ margin: "10px" }}>
+        <Switch
+          checked={darkMode}
+          onChange={setDarkMode}
+          checkedChildren="Темная"
+          unCheckedChildren="Светлая"
+        />
+      </div>
       <Space
         direction="vertical"
         size="middle"
@@ -146,6 +159,7 @@ const ReportsScripts = () => {
             disabled={
               (!dataZabbix || dataZabbix.length === 0)
             }
+            style={{ marginLeft: "10px"}}
           >
             Export in Excel
           </Button>

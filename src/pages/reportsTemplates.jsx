@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Select, Space, Button, Card, Spin } from "antd";
 
 import { api } from "../utils/Api";
@@ -7,6 +7,7 @@ import exportToExcelDefault from "../utils/exportToExcel";
 import exportToExcelHosts from "../utils/exportToExcelHosts";
 import TableDataHosts from "../components/table/TableHosts";
 import { PASSWORD, USER_NAME, ZABBIX_SERVER } from "../utils/constants";
+import "./reportsTemplates.css"; // Подключаем стили
 
 const ReportsTemplates = () => {
   const { Option } = Select;

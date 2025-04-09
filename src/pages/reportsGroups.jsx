@@ -1,13 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Select, Space, Button, Card, Spin } from "antd";
 import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
 import { api } from "../utils/Api";
-import TableData from "../components/table/Table";
 import exportToExcelDefault from "../utils/exportToExcel";
-import TableDataHosts from "../components/table/TableHosts";
 import exportToExcelHostsWithGroups from "../utils/exportToExcelHostsWithGroups";
 import TableHostsWithGroups from "../components/table/TableHostsWithGroups";
 import { PASSWORD, USER_NAME, ZABBIX_SERVER } from "../utils/constants";
+import "./reportsGroups.css"; // Подключаем стили
 
 const ReportsGroups = () => {
   const { Option } = Select;

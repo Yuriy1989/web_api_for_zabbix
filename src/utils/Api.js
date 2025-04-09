@@ -158,7 +158,6 @@ class Api {
   }
 
   getTriggers(authToken, server, hostids) {
-    console.log("hostids API", hostids);
     return fetch(`${server}`, {
       method: "POST",
       headers: this._headers,
@@ -190,7 +189,6 @@ class Api {
   }
 
   getAllHostsByService(authToken, server, nameTag, valueTag) {
-    console.log(nameTag, valueTag);
     return fetch(`${server}`, {
       method: "POST",
       headers: this._headers,
