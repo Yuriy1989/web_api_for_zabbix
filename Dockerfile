@@ -12,5 +12,8 @@ FROM nginx:alpine AS frontendzabix
 WORKDIR /app
 COPY --from=builder /app/build /usr/share/nginx/html
 COPY ./nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf
+# Копируем SSL-сертификаты
+COPY ./certs/server.crt /etc/nginx/certs/server.crt
+COPY ./certs/server.key /etc/nginx/certs/server.key
 EXPOSE 3000
 CMD [ "nginx", "-g", "daemon off;" ]
