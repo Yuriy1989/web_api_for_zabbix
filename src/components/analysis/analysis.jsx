@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import dayjs from "dayjs";
+import * as XLSX from "xlsx";  // Импортируем библиотеку для экспорта в Excel
 import "dayjs/locale/ru";
 import {
   Select,
@@ -237,6 +238,37 @@ const Analysis = () => {
     }
   };
 
+    // Функция для преобразования Unix timestamp в читаемую дату
+  const convertTimestampToDate = (timestamp) => {
+    return dayjs.unix(timestamp).format("YYYY-MM-DD HH:mm:ss");
+  };
+
+  // Функция для экспорта данных в Excel (Детализация сработок)
+  const exportToExcelAlerts = () => {
+    // Преобразуем данные в читаемые даты
+    const modifiedData = alertsDataAll.map((alert) => ({
+      ...alert,
+      clock: convertTimestampToDate(alert.clock), // Преобразуем время в дату
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(modifiedData); // Для первой таблицы (детализация сработок)
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Alert Details");
+
+    // Генерируем файл Excel и инициируем его скачивание
+    XLSX.writeFile(wb, "alert_details.xlsx");
+  };
+
+  // Функция для экспорта данных в Excel (Сводная информация)
+  const exportToExcelSummary = () => {
+    const ws = XLSX.utils.json_to_sheet(tableData_3);  // Для второй таблицы (сводная информация)
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Alerts Summary");
+
+    // Генерируем файл Excel и инициируем его скачивание
+    XLSX.writeFile(wb, "alerts_summary.xlsx");
+  };
+
   //Запрос на выгрузку все алертов за выбранный период
   const handleAlertMonth = async () => {
     if (selectedServices.length === 0) {
@@ -263,15 +295,6 @@ const Analysis = () => {
           "service",
           service
         );
-
-        // console.log(
-        //   "По сервису",
-        //   service,
-        //   "найдено",
-        //   hosts.result.length,
-        //   "hosts из них",
-        //   hosts.result
-        // );
 
         allHostsByServices = [
           ...allHostsByServices,
@@ -324,7 +347,7 @@ const Analysis = () => {
 
   const groupServicesBySeverity = (data) => {
     const result = {};
-    // console.log("data", data);
+    console.log("data", data);
 
     data.forEach((alert) => {
       const service = alert.serviceName || "unknown";
@@ -421,6 +444,66 @@ const Analysis = () => {
 
   const { chartData, nameServices } = processAlertsData(alertsDataAll);
 
+  // Пример данных для таблицы
+  const columns_3 = [
+    {
+      title: "Название сработки",
+      dataIndex: "name",
+      key: "name",
+      sorter: (a, b) => a.name.localeCompare(b.name),
+    },
+    {
+      title: "Уровень важности",
+      dataIndex: "severity",
+      key: "severity",
+      filters: severityFilters,
+      onFilter: (value, record) => record.severity === value,
+      sorter: (a, b) => a.severity - b.severity,
+      render: (severity) => {
+        const label = SEVERITY_LABELS[severity];
+        const color = SEVERITY_COLORS[label] || "default";
+        return (
+          <Tag color={color} style={{ fontSize: "12px" }}>
+            {label}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Количество сработок",
+      dataIndex: "count",
+      key: "count",
+      sorter: (a, b) => a.count - b.count,
+    },
+  ];
+
+  // Функция для группировки алертов по имени (name) и подсчета их количества
+  const groupAlertsByName = (alertsData) => {
+    const groupedAlerts = {};
+
+    alertsData.forEach((alert) => {
+      const alertName = alert.name;
+
+      // Если уже есть такая группа для этого имени, увеличиваем счетчик
+      if (groupedAlerts[alertName]) {
+        groupedAlerts[alertName].count += 1;
+      } else {
+        // Если это первый раз, создаем новую запись
+        groupedAlerts[alertName] = { name: alertName, count: 1, severity: alert.severity };
+      }
+    });
+    console.log("groupedAlerts", groupedAlerts);
+
+    // Преобразуем объект в массив для удобства отображения в таблице
+    return Object.values(groupedAlerts);
+  };
+
+  // Пример использования этой функции
+  const groupedAlertData = groupAlertsByName(alertsDataAll); // alertsDataAll - это ваш массив с данными
+
+  // Данные для таблицы (сгруппированные данные)
+  const tableData_3 = groupedAlertData;
+
   useEffect(() => {
     const timeTill = Math.floor(Date.now() / 1000);
     const timeFrom = timeTill - 30 * 24 * 60 * 60;
@@ -433,7 +516,7 @@ const Analysis = () => {
       <Card
         title="Нажмите Загрузить, чтобы подгрузить сервисы из zabbix"
         size="small"
-        style={{ margin: "10px",}}
+        style={{ margin: "10px" }}
       >
         <Select
           size="small"
@@ -530,7 +613,36 @@ const Analysis = () => {
             columns={columns_2}
             dataSource={tableData}
             pagination={false}
+            size="small" // Уменьшенный стиль
+            style={{ fontSize: "12px" }} // Минималистичный дизайн
           />
+        </Card>
+      </Space>
+      <Space
+        direction="vertical"
+        size="middle"
+        style={{
+          display: "flex",
+          margin: "10px",
+        }}
+      >
+        <Card title="Сводная информация по алертам" size="small">
+          <Table
+            columns={columns_3}
+            dataSource={tableData_3}
+            pagination={false}
+            rowKey="name"
+            size="small" // Уменьшенный стиль
+            style={{ fontSize: "12px" }} // Минималистичный дизайн
+          />
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={exportToExcelSummary} // Добавляем обработчик для экспорта
+            style={{ marginTop: "10px" }}
+          >
+            Выгрузить в Excel
+          </Button>
         </Card>
       </Space>
 
@@ -587,6 +699,14 @@ const Analysis = () => {
             size="small" // Уменьшенный стиль
             style={{ fontSize: "12px" }} // Минималистичный дизайн
           />
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={exportToExcelAlerts} // Добавляем обработчик для экспорта
+            style={{ marginTop: "10px" }}
+          >
+            Выгрузить в Excel (Сводная информация)
+          </Button>
         </Card>
       </Space>
     </>

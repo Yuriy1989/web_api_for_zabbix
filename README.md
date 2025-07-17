@@ -121,7 +121,7 @@ class ModuleClass extends CController {
 ```php
 <?php 
 
-$url = "http://192.168.2.14:3000/";
+$url = "http://192.168.2.14:4001/";
 
 echo <<<HTML
 <style>
@@ -146,4 +146,10 @@ echo <<<HTML
 <iframe src="{$url}"></iframe>
 HTML;
 ?>
+```
+8. При необходимости пробросить сертификат в контейнер:
+```bash
+	volumes:
+      - /usr/local/openresty/nginx/conf/ssl.crt:/etc/nginx/certs/server.crt:ro
+      - /usr/local/openresty/nginx/conf/ssl.key:/etc/nginx/certs/server.key:ro 
 ```

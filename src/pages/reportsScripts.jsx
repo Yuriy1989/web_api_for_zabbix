@@ -102,12 +102,12 @@ const ReportsScripts = () => {
   return (
     <>
     <div style={{ margin: "10px" }}>
-        <Switch
+        {/* <Switch
           checked={darkMode}
           onChange={setDarkMode}
           checkedChildren="Темная"
           unCheckedChildren="Светлая"
-        />
+        /> */}
       </div>
       <Space
         direction="vertical"
