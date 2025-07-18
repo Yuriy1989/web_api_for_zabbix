@@ -593,6 +593,11 @@ const Analysis = () => {
           {error && <p style={{ color: "red" }}>{error}</p>}
         </div>
       </Card>
+      {loading && (
+        <div className="loading-overlay">
+          <Spin size="large" />
+        </div>
+      )}
       <>
         {alertsDataAll.length !== 0 && (
           <>
@@ -612,12 +617,6 @@ const Analysis = () => {
                 }
                 size="small"
               >
-                {loading && (
-                  <div className="loading-overlay">
-                    <Spin size="large" />
-                  </div>
-                )}
-
                 <Table
                   columns={columns_2}
                   dataSource={tableData}
@@ -663,11 +662,6 @@ const Analysis = () => {
                 title="Гистограмма количества алертов по сервисам"
                 size="small"
               >
-                {loading && (
-                  <div className="loading-overlay">
-                    <Spin size="large" />
-                  </div>
-                )}
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
