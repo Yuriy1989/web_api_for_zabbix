@@ -8,4 +8,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - '4001:4001'
+    volumes:
+      - /usr/local/openresty/nginx/conf/ssl.crt:/etc/nginx/certs/server.crt:ro
+      - /usr/local/openresty/nginx/conf/ssl.key:/etc/nginx/certs/server.key:ro
+
     restart: always
