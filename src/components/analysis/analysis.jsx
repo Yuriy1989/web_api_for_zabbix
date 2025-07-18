@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import dayjs from "dayjs";
-import * as XLSX from "xlsx";  // Импортируем библиотеку для экспорта в Excel
+import * as XLSX from "xlsx"; // Импортируем библиотеку для экспорта в Excel
 import "dayjs/locale/ru";
 import {
   Select,
@@ -238,7 +238,7 @@ const Analysis = () => {
     }
   };
 
-    // Функция для преобразования Unix timestamp в читаемую дату
+  // Функция для преобразования Unix timestamp в читаемую дату
   const convertTimestampToDate = (timestamp) => {
     return dayjs.unix(timestamp).format("YYYY-MM-DD HH:mm:ss");
   };
@@ -261,7 +261,7 @@ const Analysis = () => {
 
   // Функция для экспорта данных в Excel (Сводная информация)
   const exportToExcelSummary = () => {
-    const ws = XLSX.utils.json_to_sheet(tableData_3);  // Для второй таблицы (сводная информация)
+    const ws = XLSX.utils.json_to_sheet(tableData_3); // Для второй таблицы (сводная информация)
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Alerts Summary");
 
@@ -489,7 +489,11 @@ const Analysis = () => {
         groupedAlerts[alertName].count += 1;
       } else {
         // Если это первый раз, создаем новую запись
-        groupedAlerts[alertName] = { name: alertName, count: 1, severity: alert.severity };
+        groupedAlerts[alertName] = {
+          name: alertName,
+          count: 1,
+          severity: alert.severity,
+        };
       }
     });
     console.log("groupedAlerts", groupedAlerts);
@@ -501,6 +505,8 @@ const Analysis = () => {
   // Пример использования этой функции
   const groupedAlertData = groupAlertsByName(alertsDataAll); // alertsDataAll - это ваш массив с данными
 
+  console.log("alertsDataAll", alertsDataAll);
+  console.log("alertsDataAll.length", alertsDataAll.length);
   // Данные для таблицы (сгруппированные данные)
   const tableData_3 = groupedAlertData;
 
@@ -587,128 +593,136 @@ const Analysis = () => {
           {error && <p style={{ color: "red" }}>{error}</p>}
         </div>
       </Card>
-      <Space
-        direction="vertical"
-        size="middle"
-        style={{
-          display: "flex",
-          margin: "10px",
-        }}
-      >
-        <Card
-          title={
-            formattedRange
-              ? `Аналитика по алертам за период: ${formattedRange}`
-              : ""
-          }
-          size="small"
-        >
-          {loading && (
-            <div className="loading-overlay">
-              <Spin size="large" />
-            </div>
-          )}
+      <>
+        {alertsDataAll.length !== 0 && (
+          <>
+            <Space
+              direction="vertical"
+              size="middle"
+              style={{
+                display: "flex",
+                margin: "10px",
+              }}
+            >
+              <Card
+                title={
+                  formattedRange
+                    ? `Аналитика по алертам за период: ${formattedRange}`
+                    : ""
+                }
+                size="small"
+              >
+                {loading && (
+                  <div className="loading-overlay">
+                    <Spin size="large" />
+                  </div>
+                )}
 
-          <Table
-            columns={columns_2}
-            dataSource={tableData}
-            pagination={false}
-            size="small" // Уменьшенный стиль
-            style={{ fontSize: "12px" }} // Минималистичный дизайн
-          />
-        </Card>
-      </Space>
-      <Space
-        direction="vertical"
-        size="middle"
-        style={{
-          display: "flex",
-          margin: "10px",
-        }}
-      >
-        <Card title="Сводная информация по алертам" size="small">
-          <Table
-            columns={columns_3}
-            dataSource={tableData_3}
-            pagination={false}
-            rowKey="name"
-            size="small" // Уменьшенный стиль
-            style={{ fontSize: "12px" }} // Минималистичный дизайн
-          />
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={exportToExcelSummary} // Добавляем обработчик для экспорта
-            style={{ marginTop: "10px" }}
-          >
-            Выгрузить в Excel
-          </Button>
-        </Card>
-      </Space>
-
-      <Space
-        direction="vertical"
-        size="middle"
-        style={{ display: "flex", margin: "10px" }}
-      >
-        <Card title="Гистограмма количества алертов по сервисам" size="small">
-          {loading && (
-            <div className="loading-overlay">
-              <Spin size="large" />
-            </div>
-          )}
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              {nameServices?.map((service) =>
-                ["Average", "High", "Disaster"].map((severity) => (
-                  <Bar
-                    key={`${service}_${severity}`}
-                    dataKey={`${service}_${severity}`}
-                    stackId={service}
-                    fill={SEVERITY_COLORS[severity]}
-                    name={`${service} (${severity})`}
-                  />
-                ))
-              )}
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-        {/* Таблица с группировкой по сервису */}
-        <Card
-          title="Детализация сработок"
-          size="small"
-          style={{ fontSize: "12px" }}
-        >
-          <Table
-            columns={columns}
-            dataSource={alertsDataAll}
-            rowKey="eventid"
-            pagination={{
-              pageSize: pagination.pageSize,
-              current: pagination.current,
-              showSizeChanger: true,
-              pageSizeOptions: ["10", "15", "20", "50"],
-              onChange: (page, pageSize) =>
-                setPagination({ current: page, pageSize }),
-            }}
-            size="small" // Уменьшенный стиль
-            style={{ fontSize: "12px" }} // Минималистичный дизайн
-          />
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={exportToExcelAlerts} // Добавляем обработчик для экспорта
-            style={{ marginTop: "10px" }}
-          >
-            Выгрузить в Excel (Сводная информация)
-          </Button>
-        </Card>
-      </Space>
+                <Table
+                  columns={columns_2}
+                  dataSource={tableData}
+                  pagination={false}
+                  size="small" // Уменьшенный стиль
+                  style={{ fontSize: "12px" }} // Минималистичный дизайн
+                />
+              </Card>
+            </Space>
+            <Space
+              direction="vertical"
+              size="middle"
+              style={{
+                display: "flex",
+                margin: "10px",
+              }}
+            >
+              <Card title="Сводная информация по алертам" size="small">
+                <Table
+                  columns={columns_3}
+                  dataSource={tableData_3}
+                  pagination={false}
+                  rowKey="name"
+                  size="small" // Уменьшенный стиль
+                  style={{ fontSize: "12px" }} // Минималистичный дизайн
+                />
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  onClick={exportToExcelSummary} // Добавляем обработчик для экспорта
+                  style={{ marginTop: "10px" }}
+                >
+                  Выгрузить в Excel
+                </Button>
+              </Card>
+            </Space>
+            <Space
+              direction="vertical"
+              size="middle"
+              style={{ display: "flex", margin: "10px" }}
+            >
+              <Card
+                title="Гистограмма количества алертов по сервисам"
+                size="small"
+              >
+                {loading && (
+                  <div className="loading-overlay">
+                    <Spin size="large" />
+                  </div>
+                )}
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    {nameServices?.map((service) =>
+                      ["Average", "High", "Disaster"].map((severity) => (
+                        <Bar
+                          key={`${service}_${severity}`}
+                          dataKey={`${service}_${severity}`}
+                          stackId={service}
+                          fill={SEVERITY_COLORS[severity]}
+                          name={`${service} (${severity})`}
+                        />
+                      ))
+                    )}
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+              {/* Таблица с группировкой по сервису */}
+              <Card
+                title="Детализация сработок"
+                size="small"
+                style={{ fontSize: "12px" }}
+              >
+                <Table
+                  columns={columns}
+                  dataSource={alertsDataAll}
+                  rowKey="eventid"
+                  pagination={{
+                    pageSize: pagination.pageSize,
+                    current: pagination.current,
+                    showSizeChanger: true,
+                    pageSizeOptions: ["10", "15", "20", "50"],
+                    onChange: (page, pageSize) =>
+                      setPagination({ current: page, pageSize }),
+                  }}
+                  size="small" // Уменьшенный стиль
+                  style={{ fontSize: "12px" }} // Минималистичный дизайн
+                />
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  onClick={exportToExcelAlerts} // Добавляем обработчик для экспорта
+                  style={{ marginTop: "10px" }}
+                >
+                  Выгрузить в Excel (Сводная информация)
+                </Button>
+              </Card>
+            </Space>
+          </>
+        )}
+      </>
     </>
   );
 };

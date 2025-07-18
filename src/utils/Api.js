@@ -171,6 +171,7 @@ class Api {
           expandExpression: true,
           sortorder: "DESC",
           min_severity: 3,
+          
           output: [
             "triggerid",
             "expression",
