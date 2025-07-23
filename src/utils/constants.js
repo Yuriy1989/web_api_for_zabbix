@@ -1,7 +1,7 @@
-export const USER_NAME = "DudinIuV";
-export const PASSWORD = "#6AsPTpz2/";
-export const ZABBIX_SERVER = "https://zabbix.vseinstrumenti.ru/api_jsonrpc.php";
-export const URL_ZABBIX = "https://zabbix.vseinstrumenti.ru";
+export const USER_NAME = "123";
+export const PASSWORD = "3456";
+export const ZABBIX_SERVER = "https://zabbix.ru/api_jsonrpc.php";
+export const URL_ZABBIX = "https://zabbix.ru";
 
 
 export const ALERTS_FOR_ZABBIX = [
