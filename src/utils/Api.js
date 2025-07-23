@@ -59,7 +59,10 @@ class Api {
   getAllHosts(authToken, data) {
     return fetch(`${data.server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "host.get",
@@ -67,7 +70,6 @@ class Api {
           output: ["hostid", "host", "name"], // Какие поля выгружать
           selectInterfaces: ["interfaceid", "ip"], // Дополнительно можно выбрать интерфейсы
         },
-        auth: `${authToken}`,
         id: 2,
       }),
     })
@@ -79,7 +81,10 @@ class Api {
     console.log(selectedTemplate);
     return fetch(`${server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "host.get",
@@ -88,7 +93,6 @@ class Api {
           selectInterfaces: ["interfaceid", "ip"], // Дополнительно можно выбрать интерфейсы
           templateids: selectedTemplate,
         },
-        auth: `${authToken}`,
         id: 2,
       }),
     })
@@ -100,7 +104,10 @@ class Api {
     console.log('nameHostGroup', nameHostGroup);
     return fetch(`${server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "hostgroup.get",
@@ -110,7 +117,6 @@ class Api {
           },
           selectHosts: ["hostid", "name", "description"], // Связанные хосты
         },
-        auth: authToken,
         id: 2,
       }),
     })
@@ -121,7 +127,10 @@ class Api {
   getTemplates(authToken, server) {
     return fetch(`${server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "template.get",
@@ -130,7 +139,6 @@ class Api {
           // sortorder: "DESC",
           sortfiled: "name",
         },
-        auth: authToken,
         id: 1,
       }),
     })
@@ -141,7 +149,10 @@ class Api {
   getHostsByTemplates(authToken, server) {
     return fetch(`${server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "template.get",
@@ -149,7 +160,6 @@ class Api {
           output: ["templateid", "name"],
           sortfiled: "name",
         },
-        auth: authToken,
         id: 1,
       }),
     })
@@ -160,7 +170,10 @@ class Api {
   getTriggers(authToken, server, hostids) {
     return fetch(`${server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "trigger.get",
@@ -181,7 +194,6 @@ class Api {
             "status",
           ], // Какие поля выгружать
         },
-        auth: authToken,
         id: 3,
       }),
     })
@@ -192,7 +204,10 @@ class Api {
   getAllHostsByService(authToken, server, nameTag, valueTag) {
     return fetch(`${server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "host.get",
@@ -208,7 +223,6 @@ class Api {
             },
           ],
         },
-        auth: `${authToken}`,
         id: 2,
       }),
     })
@@ -219,7 +233,10 @@ class Api {
   getItemByHosts(authToken, server, hosts) {
     return fetch(`${server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "item.get",
@@ -231,7 +248,6 @@ class Api {
           },
           selectHosts: ["hostid", "name", "description"], // Связанные хосты
         },
-        auth: `${authToken}`,
         id: 2,
       }),
     })
@@ -242,7 +258,10 @@ class Api {
   getAllTriggersByHost(authToken, server, hostIds) {
     return fetch(`${server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "trigger.get",
@@ -261,7 +280,6 @@ class Api {
           sortorder: "DESC",
           hostids: hostIds, // Указываем список ID хостов
         },
-        auth: `${authToken}`,
         id: 3,
       }),
     })
@@ -272,7 +290,10 @@ class Api {
   getAllTriggersByHostAlert(authToken, server, hostIds, timeFrom, timeTill) {
     return fetch(`${server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "trigger.get",
@@ -297,7 +318,6 @@ class Api {
           time_from: timeFrom,
           time_till: timeTill,
         },
-        auth: `${authToken}`,
         id: 3,
       }),
     })
@@ -315,7 +335,10 @@ class Api {
   ) {
     return fetch(`${server}`, {
       method: "POST",
-      headers: this._headers,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "event.get",
@@ -329,7 +352,6 @@ class Api {
           selectHosts: ["hostid", "name", "description"], // Связанные хосты
           // suppressed: true,
         },
-        auth: `${authToken}`,
         id: 3,
       }),
     })
@@ -339,10 +361,12 @@ class Api {
 
   //Получения всех тегов с именем service
   getTagsWithService(authToken, server) {
+    console.log('authToken', authToken, "server", server)
     return fetch(`${server}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -351,12 +375,12 @@ class Api {
           output: ["hostid", "name"], // Получаем hostid и имя хоста
           selectTags: "extend", // Загружаем все теги хостов
         },
-        auth: authToken,
         id: 1,
       }),
     })
       .then((res) => res.json())
       .then((data) => {
+        console.log('data', data) 
         // Извлекаем только теги с именем "service"
 
         const serviceTags = [];
@@ -380,6 +404,7 @@ class Api {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "authorization": `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -387,7 +412,6 @@ class Api {
         params: {
           output: "extend",
         },
-        auth: authToken,
         id: 1,
       }),
     })
@@ -397,8 +421,6 @@ class Api {
 }
 
 export const api = new Api({
-  // baseUrl: 'http://192.168.2.36:8080/api_jsonrpc.php',
-  // baseUrl: 'https://zabbix.vseinstrumenti.ru/api_jsonrpc.php',
   headers: {
     "Content-Type": "application/json",
     // "Access-Control-Allow-Origin": "*",

@@ -221,6 +221,7 @@ const Analysis = () => {
       };
 
       const token = await api.getApi(data);
+      console.log('token',token);
       setToken(token.result);
       const services = await api.getTagsWithService(token.result, server);
       const uniqueTags = [...new Set(services)];
@@ -347,7 +348,6 @@ const Analysis = () => {
 
   const groupServicesBySeverity = (data) => {
     const result = {};
-    console.log("data", data);
 
     data.forEach((alert) => {
       const service = alert.serviceName || "unknown";
@@ -496,17 +496,12 @@ const Analysis = () => {
         };
       }
     });
-    console.log("groupedAlerts", groupedAlerts);
-
     // Преобразуем объект в массив для удобства отображения в таблице
     return Object.values(groupedAlerts);
   };
 
   // Пример использования этой функции
   const groupedAlertData = groupAlertsByName(alertsDataAll); // alertsDataAll - это ваш массив с данными
-
-  console.log("alertsDataAll", alertsDataAll);
-  console.log("alertsDataAll.length", alertsDataAll.length);
   // Данные для таблицы (сгруппированные данные)
   const tableData_3 = groupedAlertData;
 
