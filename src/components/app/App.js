@@ -8,6 +8,7 @@ import Analysis from "../analysis/analysis";
 import ReportsTemplates from "../../pages/reportsTemplates";
 import ReportsScripts from "../../pages/reportsScripts";
 import ReportsGroups from "../../pages/reportsGroups";
+import ReportError from "../../pages/reportError";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/reportsScripts" element={<ReportsScripts />} />
           <Route path="/reportsGroups" element={<ReportsGroups />} />
           <Route path="/replaces" element={<Replaces />} />
+          <Route path="/reportsError" element={<ReportError />} />
         </Routes>
       </ConfigProvider>
     </>

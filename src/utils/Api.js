@@ -57,18 +57,19 @@ class Api {
   }
 
   getAllHosts(authToken, data) {
-    return fetch(`${data.server}`, {
+    return fetch(`${data}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "host.get",
         params: {
-          output: ["hostid", "host", "name"], // Какие поля выгружать
-          selectInterfaces: ["interfaceid", "ip"], // Дополнительно можно выбрать интерфейсы
+          output: ["name","status"],
+          selectInterfaces: ["interfaceid", "ip"],
+          selectTags: "extend",
         },
         id: 2,
       }),
@@ -78,12 +79,11 @@ class Api {
   }
 
   getAllHostsByTemplates(authToken, server, selectedTemplate) {
-    console.log(selectedTemplate);
     return fetch(`${server}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -101,12 +101,11 @@ class Api {
   }
 
   getHostsIdByNameGroup(authToken, nameHostGroup, server) {
-    console.log('nameHostGroup', nameHostGroup);
     return fetch(`${server}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -129,7 +128,7 @@ class Api {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -151,7 +150,7 @@ class Api {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -172,7 +171,7 @@ class Api {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -184,7 +183,7 @@ class Api {
           expandExpression: true,
           sortorder: "DESC",
           min_severity: 3,
-          
+
           output: [
             "triggerid",
             "expression",
@@ -206,7 +205,7 @@ class Api {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -235,7 +234,7 @@ class Api {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -260,7 +259,7 @@ class Api {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -292,7 +291,7 @@ class Api {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -337,7 +336,7 @@ class Api {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -361,12 +360,12 @@ class Api {
 
   //Получения всех тегов с именем service
   getTagsWithService(authToken, server) {
-    console.log('authToken', authToken, "server", server)
+    console.log("authToken", authToken, "server", server);
     return fetch(`${server}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -380,7 +379,7 @@ class Api {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log('data', data) 
+        console.log("data", data);
         // Извлекаем только теги с именем "service"
 
         const serviceTags = [];
@@ -404,7 +403,7 @@ class Api {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "authorization": `Bearer ${authToken}`,
+        authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         jsonrpc: "2.0",

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Select, Space, Button, Card, Spin } from "antd";
+import { ConfigProvider, Select, Space, Button, Card, Spin, Typography, theme } from "antd";
 import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
 import { api } from "../utils/Api";
 import TableData from "../components/table/Table";
@@ -9,6 +9,7 @@ import TableDataHosts from "../components/table/TableHosts";
 import { PASSWORD, USER_NAME, ZABBIX_SERVER } from "../utils/constants";
 import "./reportServices.css"; // Подключаем стили
 const { Option } = Select;
+const { Text } = Typography;
 
 const ReportServices = () => {
   const [dataZabbix, setDataZabbix] = useState();
@@ -93,7 +94,11 @@ const ReportServices = () => {
         );
         allHosts = [...allHosts, ...hosts.result];
         const hostIds = allHosts.map((host) => host.hostid);
-        const tempTriggers = await api.getAllTriggersByHost(token, server, hostIds)
+        const tempTriggers = await api.getAllTriggersByHost(
+          token,
+          server,
+          hostIds
+        );
         console.log("triggers", tempTriggers.result);
         const triggers = mergeTagsIntoTriggers(allHosts, tempTriggers.result);
         setDataZabbix(triggers);
@@ -140,7 +145,29 @@ const ReportServices = () => {
   };
 
   return (
-    <>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorPrimary: "#7c3aed", // фиолетовый акцент
+          colorInfo: "#7c3aed",
+          colorBgBase: "#0b1221", // общий фон
+          colorBgContainer: "#111a2c", // фон карточек/таблиц
+          colorBorder: "#1e293b",
+          borderRadius: 12,
+          fontSize: 13,
+        },
+        components: {
+          Card: { headerBg: "#0f172a", colorBorderSecondary: "#1e293b" },
+          Table: {
+            headerBg: "#0f172a",
+            headerSplitColor: "#1e293b",
+            borderColor: "#1e293b",
+          },
+          Tag: { defaultColor: "#1f2937" },
+        },
+      }}
+    >
       {loading && (
         <div className="loading-overlay">
           <Spin size="large" />
@@ -234,7 +261,7 @@ const ReportServices = () => {
           </div>
         )}
       </main>
-    </>
+    </ConfigProvider>
   );
 };
 

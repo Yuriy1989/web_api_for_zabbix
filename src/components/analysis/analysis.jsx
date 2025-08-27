@@ -3,6 +3,8 @@ import dayjs from "dayjs";
 import * as XLSX from "xlsx"; // Импортируем библиотеку для экспорта в Excel
 import "dayjs/locale/ru";
 import {
+  ConfigProvider,
+  theme,
   Select,
   Space,
   Card,
@@ -11,6 +13,8 @@ import {
   Table,
   Tag,
   DatePicker,
+  Typography,
+  Divider,
 } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
 import {
@@ -35,6 +39,8 @@ import {
   ZABBIX_SERVER,
 } from "../../utils/constants";
 
+const { Text } = Typography;
+
 const Analysis = () => {
   dayjs.locale("ru");
   const defaultSelectedValues = ALERTS_FOR_ZABBIX.map(
@@ -42,9 +48,6 @@ const Analysis = () => {
   );
   const { Option } = Select;
   const { RangePicker } = DatePicker;
-  const [server, setServer] = useState(ZABBIX_SERVER);
-  const [userName, setUserName] = useState(USER_NAME);
-  const [password, setPassword] = useState(PASSWORD);
   const [services, setServices] = useState([]);
   const [token, setToken] = useState();
   const [dateDefaultForDatePicker, setDateDefaultForDatePicker] = useState(); // Выбранный промежуток времени
@@ -214,16 +217,19 @@ const Analysis = () => {
     setLoading(true);
 
     try {
-      const data = {
-        userName: userName,
-        password: password,
-        server: server,
+      const auth = {
+        userName: USER_NAME,
+        password: PASSWORD,
+        server: ZABBIX_SERVER,
       };
 
-      const token = await api.getApi(data);
-      console.log('token',token);
+      const token = await api.getApi(auth);
+
       setToken(token.result);
-      const services = await api.getTagsWithService(token.result, server);
+      const services = await api.getTagsWithService(
+        token.result,
+        ZABBIX_SERVER
+      );
       const uniqueTags = [...new Set(services)];
       // Формирование массива options
       const options = uniqueTags.map((tag) => ({
@@ -292,7 +298,7 @@ const Analysis = () => {
       for (const service of selectedServices) {
         const hosts = await api.getAllHostsByService(
           token,
-          server,
+          ZABBIX_SERVER,
           "service",
           service
         );
@@ -309,7 +315,7 @@ const Analysis = () => {
 
           const alertsData = await api.getEventTag(
             token,
-            server,
+            ZABBIX_SERVER,
             hostIds,
             selectedDatesUnixFormat[0],
             selectedDatesUnixFormat[1],
@@ -513,206 +519,256 @@ const Analysis = () => {
   }, []);
 
   return (
-    <>
-      <Card
-        title="Нажмите Загрузить, чтобы подгрузить сервисы из zabbix"
-        size="small"
-        style={{ margin: "10px" }}
-      >
-        <Select
-          size="small"
-          placeholder="Выберите сервис"
-          showSearch // Включаем поиск
-          mode="multiple"
-          filterOption={(input, option) =>
-            option.children.toLowerCase().includes(input.toLowerCase())
-          } // Фильтрация по введенному значению
-          allowClear
-          style={{
-            width: "300px",
-            marginRight: "10px",
-          }}
-          onChange={(value) => setSelectedServices(value)} // Устанавливаем выбранное значение
-        >
-          {services &&
-            services.map((item, index) => (
-              <Option key={index} value={`${item.value}`}>
-                {item.value}
-              </Option>
-            ))}
-        </Select>
-        <Button size="small" type="primary" onClick={HandleGetServices}>
-          Загрузить
-        </Button>
-        <RangePicker
-          size="small"
-          style={{
-            width: "300px",
-            marginLeft: "10px",
-          }}
-          value={dateDefaultForDatePicker}
-          onChange={(value) => {
-            setDateDefaultForDatePicker(value);
-          }} // Устанавливаем выбранное значение
-        />
-        <Select
-          size="small"
-          placeholder="Выберите уровень сработки"
-          mode="multiple"
-          style={{
-            width: "300px",
-            marginLeft: "10px",
-          }}
-          value={selectedValues} // Управляемое значение
-          onChange={setSelectedValues} // Устанавливаем выбранное значение
-        >
-          {ALERTS_FOR_ZABBIX.map((item, index) => {
-            const key = Object.keys(item)[0];
-            const value = item[key];
-            return (
-              <Option key={index} value={value}>
-                {key}
-              </Option>
-            );
-          })}
-        </Select>
-        <div style={{ marginTop: "10px" }}>
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={handleAlertMonth}
-            size="small"
-          >
-            Выполнить запрос
-          </Button>
-          {error && <p style={{ color: "red" }}>{error}</p>}
-        </div>
-      </Card>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorPrimary: "#7c3aed", // фиолетовый акцент
+          colorInfo: "#7c3aed",
+          colorBgBase: "#0b1221", // общий фон
+          colorBgContainer: "#111a2c", // фон карточек/таблиц
+          colorBorder: "#1e293b",
+          borderRadius: 12,
+          fontSize: 13,
+        },
+        components: {
+          Card: { headerBg: "#0f172a", colorBorderSecondary: "#1e293b" },
+          Table: {
+            headerBg: "#0f172a",
+            headerSplitColor: "#1e293b",
+            borderColor: "#1e293b",
+          },
+          Tag: { defaultColor: "#1f2937" },
+        },
+      }}
+    >
       {loading && (
         <div className="loading-overlay">
           <Spin size="large" />
         </div>
       )}
-      <>
-        {alertsDataAll.length !== 0 && (
-          <>
-            <Space
-              direction="vertical"
-              size="middle"
-              style={{
-                display: "flex",
-                margin: "10px",
-              }}
+      <Space
+        direction="vertical"
+        size="middle"
+        style={{ display: "flex", padding: 12 }}
+      >
+        <Card
+          title={
+            <Text strong style={{ fontSize: 16 }}>
+              Нажмите Загрузить, чтобы подгрузить сервисы из zabbix
+            </Text>
+          }
+          size="small"
+          style={{ margin: "10px" }}
+        >
+          <Select
+            size="small"
+            placeholder="Выберите сервис"
+            showSearch // Включаем поиск
+            mode="multiple"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().includes(input.toLowerCase())
+            } // Фильтрация по введенному значению
+            allowClear
+            style={{
+              width: "300px",
+              marginRight: "10px",
+            }}
+            onChange={(value) => setSelectedServices(value)} // Устанавливаем выбранное значение
+          >
+            {services &&
+              services.map((item, index) => (
+                <Option key={index} value={`${item.value}`}>
+                  {item.value}
+                </Option>
+              ))}
+          </Select>
+          <Button size="small" type="primary" onClick={HandleGetServices}>
+            Загрузить
+          </Button>
+          <RangePicker
+            size="small"
+            style={{
+              width: "300px",
+              marginLeft: "10px",
+            }}
+            value={dateDefaultForDatePicker}
+            onChange={(value) => {
+              setDateDefaultForDatePicker(value);
+            }} // Устанавливаем выбранное значение
+          />
+          <Select
+            size="small"
+            placeholder="Выберите уровень сработки"
+            mode="multiple"
+            style={{
+              width: "300px",
+              marginLeft: "10px",
+            }}
+            value={selectedValues} // Управляемое значение
+            onChange={setSelectedValues} // Устанавливаем выбранное значение
+          >
+            {ALERTS_FOR_ZABBIX.map((item, index) => {
+              const key = Object.keys(item)[0];
+              const value = item[key];
+              return (
+                <Option key={index} value={value}>
+                  {key}
+                </Option>
+              );
+            })}
+          </Select>
+          <div style={{ marginTop: "10px" }}>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleAlertMonth}
+              size="small"
+              disabled={(selectedServices?.length ?? 0) === 0}
             >
-              <Card
-                title={
-                  formattedRange
-                    ? `Аналитика по алертам за период: ${formattedRange}`
-                    : ""
-                }
-                size="small"
+              Выполнить запрос
+            </Button>
+            {error && <p style={{ color: "red" }}>{error}</p>}
+          </div>
+        </Card>
+        <main className="main">
+          {alertsDataAll.length !== 0 && (
+            <>
+              <Space
+                direction="vertical"
+                size="middle"
+                style={{
+                  display: "flex",
+                  margin: "10px",
+                }}
               >
-                <Table
-                  columns={columns_2}
-                  dataSource={tableData}
-                  pagination={false}
-                  size="small" // Уменьшенный стиль
-                  style={{ fontSize: "12px" }} // Минималистичный дизайн
-                />
-              </Card>
-            </Space>
-            <Space
-              direction="vertical"
-              size="middle"
-              style={{
-                display: "flex",
-                margin: "10px",
-              }}
-            >
-              <Card title="Сводная информация по алертам" size="small">
-                <Table
-                  columns={columns_3}
-                  dataSource={tableData_3}
-                  pagination={false}
-                  rowKey="name"
-                  size="small" // Уменьшенный стиль
-                  style={{ fontSize: "12px" }} // Минималистичный дизайн
-                />
-                <Button
-                  type="primary"
-                  icon={<DownloadOutlined />}
-                  onClick={exportToExcelSummary} // Добавляем обработчик для экспорта
-                  style={{ marginTop: "10px" }}
+                <Card
+                  title={
+                    <Text strong style={{ fontSize: 16 }}>
+                      Аналитика по алертам за период
+                    </Text>
+                  }
+                  size="small"
                 >
-                  Выгрузить в Excel
-                </Button>
-              </Card>
-            </Space>
-            <Space
-              direction="vertical"
-              size="middle"
-              style={{ display: "flex", margin: "10px" }}
-            >
-              <Card
-                title="Гистограмма количества алертов по сервисам"
-                size="small"
+                  <Table
+                    columns={columns_2}
+                    dataSource={tableData}
+                    pagination={false}
+                    size="small" // Уменьшенный стиль
+                    style={{ fontSize: "12px" }} // Минималистичный дизайн
+                  />
+                </Card>
+              </Space>
+              <Space
+                direction="vertical"
+                size="middle"
+                style={{
+                  display: "flex",
+                  margin: "10px",
+                }}
               >
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    {nameServices?.map((service) =>
-                      ["Average", "High", "Disaster"].map((severity) => (
-                        <Bar
-                          key={`${service}_${severity}`}
-                          dataKey={`${service}_${severity}`}
-                          stackId={service}
-                          fill={SEVERITY_COLORS[severity]}
-                          name={`${service} (${severity})`}
-                        />
-                      ))
-                    )}
-                  </BarChart>
-                </ResponsiveContainer>
-              </Card>
-              {/* Таблица с группировкой по сервису */}
-              <Card
-                title="Детализация сработок"
-                size="small"
-                style={{ fontSize: "12px" }}
-              >
-                <Table
-                  columns={columns}
-                  dataSource={alertsDataAll}
-                  rowKey="eventid"
-                  pagination={{
-                    pageSize: pagination.pageSize,
-                    current: pagination.current,
-                    showSizeChanger: true,
-                    pageSizeOptions: ["10", "15", "20", "50"],
-                    onChange: (page, pageSize) =>
-                      setPagination({ current: page, pageSize }),
-                  }}
-                  size="small" // Уменьшенный стиль
-                  style={{ fontSize: "12px" }} // Минималистичный дизайн
-                />
-                <Button
-                  type="primary"
-                  icon={<DownloadOutlined />}
-                  onClick={exportToExcelAlerts} // Добавляем обработчик для экспорта
-                  style={{ marginTop: "10px" }}
+                <Card
+                  title={
+                    <Text strong style={{ fontSize: 16 }}>
+                      Сводная информация по алертам
+                    </Text>
+                  }
+                  size="small"
                 >
-                  Выгрузить в Excel (Сводная информация)
-                </Button>
-              </Card>
-            </Space>
-          </>
-        )}
-      </>
-    </>
+                  <Table
+                    columns={columns_3}
+                    dataSource={tableData_3}
+                    pagination={false}
+                    rowKey="name"
+                    size="small" // Уменьшенный стиль
+                    style={{ fontSize: "12px" }} // Минималистичный дизайн
+                  />
+                  <Button
+                    type="primary"
+                    icon={<DownloadOutlined />}
+                    onClick={exportToExcelSummary} // Добавляем обработчик для экспорта
+                    style={{ marginTop: "10px" }}
+                  >
+                    Выгрузить в Excel
+                  </Button>
+                </Card>
+              </Space>
+              <Space
+                direction="vertical"
+                size="middle"
+                style={{ display: "flex", margin: "10px" }}
+              >
+                <Card
+                  title={
+                    <Text strong style={{ fontSize: 16 }}>
+                      Гистограмма количества алертов по сервисам
+                    </Text>
+                  }
+                  size="small"
+                >
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      {nameServices?.map((service) =>
+                        ["Average", "High", "Disaster"].map((severity) => (
+                          <Bar
+                            key={`${service}_${severity}`}
+                            dataKey={`${service}_${severity}`}
+                            stackId={service}
+                            fill={SEVERITY_COLORS[severity]}
+                            name={`${service} (${severity})`}
+                          />
+                        ))
+                      )}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Card>
+                {/* Таблица с группировкой по сервису */}
+                <Card
+                  title={
+                    <Text strong style={{ fontSize: 16 }}>
+                      Детализация сработок
+                    </Text>
+                  }
+                  size="small"
+                  styles={{ body: { paddingTop: 10, paddingBottom: 10 } }}
+                >
+                  <div className="table">
+                    <Table
+                      columns={columns}
+                      dataSource={alertsDataAll}
+                      rowKey="eventid"
+                      pagination={{
+                        pageSize: pagination.pageSize,
+                        current: pagination.current,
+                        showSizeChanger: true,
+                        pageSizeOptions: ["10", "15", "20", "50"],
+                        onChange: (page, pageSize) =>
+                          setPagination({ current: page, pageSize }),
+                      }}
+                      size="small" // Уменьшенный стиль
+                      style={{ fontSize: "12px" }} // Минималистичный дизайн
+                    />
+                  </div>
+                  <Button
+                    type="primary"
+                    icon={<DownloadOutlined />}
+                    onClick={exportToExcelAlerts} // Добавляем обработчик для экспорта
+                    style={{ marginTop: "10px" }}
+                  >
+                    Выгрузить в Excel (Сводная информация)
+                  </Button>
+                </Card>
+              </Space>
+            </>
+          )}
+        </main>
+      </Space>
+    </ConfigProvider>
   );
 };
 

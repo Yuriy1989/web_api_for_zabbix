@@ -13,9 +13,8 @@
   color: white;
 }
 
-.main {
-  /* background-color: #282c34; */
-  min-height: 95vh;
+.main .table{
+  background: transparent;
   display: flex;
   flex-direction: column;
   color: white;
