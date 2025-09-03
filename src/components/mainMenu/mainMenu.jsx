@@ -35,6 +35,10 @@ const items = [
         label: (<NavLink to='/reportsError'>Отчеты по дублирующим IP</NavLink>),
         key: 'setting:5',
       },
+      {
+        label: (<NavLink to='/reportsLoop'>Отчеты по событиям в Loop</NavLink>),
+        key: 'setting:6',
+      },
     ]
   },
   // {

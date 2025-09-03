@@ -34,7 +34,6 @@ const ReportsGroups = () => {
       setToken(tempToken.result);
 
       const tempGroups = await api.getGroups(tempToken.result, server);
-      console.log('tempGroups', tempGroups);
       setGroups(tempGroups.result);
     } catch (error) {
       console.log("Ошибка в запросе", error);

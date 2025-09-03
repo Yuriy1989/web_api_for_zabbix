@@ -1,0 +1,83 @@
+/* Базовый фон приложения */
+body {
+  background: #0b1221; /* общий фон */
+  color: #e2e8f0;
+}
+
+/* оверлей загрузки */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+/* контейнер таблицы */
+.main .table {
+  background: transparent;
+}
+
+/* АнтД таблица: тонкая зебра и hover */
+.ant-table-wrapper .ant-table tbody > tr.row-even > td {
+  background: #0e1726;
+}
+.ant-table-wrapper .ant-table tbody > tr.row-odd > td {
+  background: #0c1525;
+}
+.ant-table-wrapper .ant-table tbody > tr:hover > td {
+  background: #152036 !important;
+}
+
+/* заголовок таблицы */
+.ant-table-wrapper .ant-table-thead > tr > th {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+  border-bottom: 1px solid #1e293b !important;
+}
+
+/* ячейки */
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  border-color: #1e293b !important;
+}
+
+/* пагинация */
+.ant-pagination .ant-pagination-item,
+.ant-pagination .ant-pagination-prev,
+.ant-pagination .ant-pagination-next {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+.ant-pagination .ant-pagination-item-active {
+  border-color: #7c3aed;
+}
+
+/* кнопки и чекбоксы вокруг */
+.ant-card .ant-card-head {
+  border-bottom-color: #1e293b !important;
+}
+.ant-card {
+  border-color: #1e293b !important;
+}
+
+/* теги (service/status) — чуть ярче на тёмном фоне */
+.ant-tag {
+  border: none;
+  background: #1f2937;
+  color: #e5e7eb;
+}
+.ant-tag-green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+.ant-tag-red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+.ant-tag-gold {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}

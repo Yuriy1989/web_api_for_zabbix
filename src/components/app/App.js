@@ -9,6 +9,7 @@ import ReportsTemplates from "../../pages/reportsTemplates";
 import ReportsScripts from "../../pages/reportsScripts";
 import ReportsGroups from "../../pages/reportsGroups";
 import ReportError from "../../pages/reportError";
+import ReportLoop from "../../pages/reportLoop";
 
 function App() {
   return (
@@ -23,6 +24,8 @@ function App() {
           <Route path="/reportsGroups" element={<ReportsGroups />} />
           <Route path="/replaces" element={<Replaces />} />
           <Route path="/reportsError" element={<ReportError />} />
+          <Route path="/reportsLoop" element={<ReportLoop />} />
+
         </Routes>
       </ConfigProvider>
     </>

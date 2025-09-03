@@ -67,7 +67,7 @@ class Api {
         jsonrpc: "2.0",
         method: "host.get",
         params: {
-          output: ["name","status"],
+          output: ["name", "status"],
           selectInterfaces: ["interfaceid", "ip"],
           selectTags: "extend",
         },
@@ -98,6 +98,84 @@ class Api {
     })
       .then((res) => this._getResponse(res))
       .catch(console.log);
+  }
+
+  getGroupIdsByNames(authToken, server, groupNames) {
+    return fetch(`${server}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "hostgroup.get",
+        params: {
+          output: ["groupid", "name"],
+          filter: { name: groupNames },
+        },
+        id: 11,
+      }),
+    }).then((res) => this._getResponse(res));
+  }
+
+  // По groupids забрать хосты с тегами и инвентарём
+  getHostsByGroupIds(authToken, server, groupIds) {
+    console.log("groupIds", groupIds);
+    return fetch(`${server}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "host.get",
+        params: {
+          groupids: groupIds,
+          output: ["hostid", "name"],
+          selectTags: "extend",
+          selectInventory: "extend",
+          selectInterfaces: ["interfaceid", "ip"],
+        },
+        id: 2,
+      }),
+    }).then((res) => this._getResponse(res));
+  }
+
+  // События по hostids за период, вместе с триггером
+  getEventsWithTriggers(
+    authToken,
+    server,
+    hostIds,
+    timeFrom,
+    timeTill,
+    severitiesValues
+  ) {
+    return fetch(`${server}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "event.get",
+        params: {
+          hostids: hostIds,
+          value: 1, // PROBLEM
+          time_from: timeFrom,
+          time_till: timeTill,
+          output: ["eventid", "clock", "value", "severity", "objectid"],
+          selectRelatedObject: "extend", // вернёт сам триггер
+          selectHosts: ["hostid", "name"],
+          ...(Array.isArray(severitiesValues) && severitiesValues.length
+            ? { trigger_severities: severitiesValues }
+            : {}),
+        },
+        id: 13,
+      }),
+    }).then((res) => this._getResponse(res));
   }
 
   getHostsIdByNameGroup(authToken, nameHostGroup, server) {
@@ -201,6 +279,7 @@ class Api {
   }
 
   getAllHostsByService(authToken, server, nameTag, valueTag) {
+    console.log("nameTag", authToken, nameTag, valueTag);
     return fetch(`${server}`, {
       method: "POST",
       headers: {
@@ -211,7 +290,7 @@ class Api {
         jsonrpc: "2.0",
         method: "host.get",
         params: {
-          // output: ["hostid", "host", "name"], // Какие поля выгружать
+          output: ["hostid", "host", "name"], // Какие поля выгружать
           selectTags: "extend", // Выгружаем все теги
           selectInterfaces: ["interfaceid", "ip"],
           evaltype: 0,

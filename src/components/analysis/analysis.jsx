@@ -14,7 +14,6 @@ import {
   Tag,
   DatePicker,
   Typography,
-  Divider,
 } from "antd";
 import { DownloadOutlined } from "@ant-design/icons";
 import {
@@ -31,12 +30,11 @@ import { api } from "../../utils/Api";
 import "./analysis.css"; // Подключаем стили
 import {
   ALERTS_FOR_ZABBIX,
-  PASSWORD,
   SEVERITY_COLORS,
   SEVERITY_LABELS,
   URL_ZABBIX,
-  USER_NAME,
   ZABBIX_SERVER,
+  TOKEN
 } from "../../utils/constants";
 
 const { Text } = Typography;
@@ -58,7 +56,6 @@ const Analysis = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedServices, setSelectedServices] = useState([]); // Выбранные сервисы
-  const [formattedRange, setFormattedRange] = useState(null);
 
   // Используем useState для управления текущей страницей и размеров
   const [pagination, setPagination] = useState({ pageSize: 15, current: 1 });
@@ -217,17 +214,8 @@ const Analysis = () => {
     setLoading(true);
 
     try {
-      const auth = {
-        userName: USER_NAME,
-        password: PASSWORD,
-        server: ZABBIX_SERVER,
-      };
-
-      const token = await api.getApi(auth);
-
-      setToken(token.result);
       const services = await api.getTagsWithService(
-        token.result,
+        TOKEN,
         ZABBIX_SERVER
       );
       const uniqueTags = [...new Set(services)];
@@ -297,7 +285,7 @@ const Analysis = () => {
       // Запрос хостов для каждого сервиса
       for (const service of selectedServices) {
         const hosts = await api.getAllHostsByService(
-          token,
+          TOKEN,
           ZABBIX_SERVER,
           "service",
           service
@@ -314,7 +302,7 @@ const Analysis = () => {
           const hostIds = hosts.result.map((host) => host.hostid); //формируем id хостов
 
           const alertsData = await api.getEventTag(
-            token,
+            TOKEN,
             ZABBIX_SERVER,
             hostIds,
             selectedDatesUnixFormat[0],
@@ -336,13 +324,7 @@ const Analysis = () => {
 
       // Убираем дубликаты хостов (если сервисы могут пересекаться)
       allHostIds = [...new Set(allHostIds)];
-      // console.log("Итоговый список ID хостов:", allHostIds);
-      // console.log("Итоговый массив алертов:", alertsDataAll);
       setAlertsDataAll(alertsDataAll);
-      const tempRangeDate = `от ${dayjs(dateDefaultForDatePicker[0]).format(
-        "D MMMM YYYY"
-      )} до ${dayjs(dateDefaultForDatePicker[1]).format("D MMMM YYYY")}`;
-      setFormattedRange(tempRangeDate);
       setError(null);
       setLoading(false);
     } catch (error) {

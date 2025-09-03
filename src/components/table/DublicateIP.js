@@ -3,8 +3,6 @@ import { useMemo, useRef, useState } from "react";
 import { Table, Input, Button, Space, Tag } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 
-const ZABBIX_BASE_URL = "https://zabbix.vseinstrumenti.ru";
-
 const summarizeStatus = (hosts = []) => {
   const enabled = hosts.filter(
     (h) => h?.status === 0 || h?.status === "0"
