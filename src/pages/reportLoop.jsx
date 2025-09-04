@@ -340,7 +340,7 @@ const ReportLoop = () => {
             <Button
               type="primary"
               onClick={HandleGetAlertsInLoop}
-              disabled={(selectedValues?.length ?? 0) === 0}
+              disabled={(selectedValueGroup?.length ?? 0) === 0}
             >
               Выполнить запрос
             </Button>

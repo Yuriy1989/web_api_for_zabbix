@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { AppstoreOutlined, MailOutlined, SettingOutlined, ExceptionOutlined } from '@ant-design/icons';
+import { useState } from 'react';
+import { AppstoreOutlined, ExceptionOutlined } from '@ant-design/icons';
 import { Menu } from 'antd';
-import { NavLink, Link } from 'react-router';
+import { NavLink } from 'react-router';
 const items = [
   {
     key: 'main',
@@ -36,49 +36,11 @@ const items = [
         key: 'setting:5',
       },
       {
-        label: (<NavLink to='/reportsLoop'>Отчеты по событиям в Loop</NavLink>),
+        label: (<NavLink to='/reportsLoop'>Отчеты по событиям, по Шаблонам</NavLink>),
         key: 'setting:6',
       },
     ]
   },
-  // {
-  //   key: 'scripts',
-  //   icon: <AppstoreOutlined />,
-  //   label: 'Скрипты',
-  //   children: [
-  //     {
-  //       label: 'Item 1',
-  //       key: 'setting:5',
-  //     },
-  //     {
-  //       label: 'Item 2',
-  //       key: 'setting:6',
-  //     },
-  //   ],
-  // },
-  // {
-  //   label: 'Работа над хостами',
-  //   key: 'hosts',
-  //   icon: <SettingOutlined />,
-  //   children: [
-  //     {
-  //       label: 'Item 1',
-  //       key: 'setting:7',
-  //     },
-  //     {
-  //       label: 'Item 2',
-  //       key: 'setting:8',
-  //     },
-  //   ],
-  // },
-  // {
-  //   key: 'UI',
-  //   label: (
-  //     <a href="https://ant.design" target="_blank" rel="noopener noreferrer">
-  //       UI взят отсюда
-  //     </a>
-  //   ),
-  // },
 ];
 const MainMenu = () => {
   const [current, setCurrent] = useState('mail');
