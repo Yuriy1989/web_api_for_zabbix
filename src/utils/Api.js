@@ -11,7 +11,6 @@ class Api {
   }
 
   async _fetchWithTimeout(resource, options, timeout = 5000) {
-    console.log("options", options);
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
@@ -20,8 +19,6 @@ class Api {
         ...options,
         signal: controller.signal,
       });
-      console.log("response", response);
-      console.log("controller.signal", controller.signal);
       clearTimeout(id); // Убираем тайм-аут при успешном ответе
       return response;
     } catch (error) {
@@ -33,6 +30,43 @@ class Api {
       console.error("Ошибка подключения:", error);
       throw error; // Повторно выбрасываем ошибку для обработки в `getApi`
     }
+  }
+
+  async login({ server, userName, password }) {
+    const res = await this._fetchWithTimeout(server, {
+      method: "POST",
+      headers: this._headers,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "user.login",
+        params: { username: userName, password },
+        id: 1,
+      }),
+    });
+    const data = await this._getResponse(res);
+    if (data.error) throw new Error(data.error.data || data.error.message);
+    return data.result; // auth token
+  }
+
+  // Универсальный вызов JSON-RPC c auth
+  async rpc({ server, auth, method, params, id = 2 }) {
+    const res = await this._fetchWithTimeout(server, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: `Bearer ${auth}`,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method,
+        params,
+        id,
+      }),
+    });
+    const data = await this._getResponse(res);
+    if (data.error)
+      throw new Error(`${data.error.message}: ${data.error.data || ""}`);
+    return data.result;
   }
 
   getApi(data) {
@@ -121,7 +155,6 @@ class Api {
 
   // По groupids забрать хосты с тегами и инвентарём
   getHostsByGroupIds(authToken, server, groupIds) {
-    console.log("groupIds", groupIds);
     return fetch(`${server}`, {
       method: "POST",
       headers: {
@@ -179,6 +212,7 @@ class Api {
   }
 
   getHostsIdByNameGroup(authToken, nameHostGroup, server) {
+    console.log("nameHostGroup", nameHostGroup, authToken, server);
     return fetch(`${server}`, {
       method: "POST",
       headers: {
@@ -279,7 +313,6 @@ class Api {
   }
 
   getAllHostsByService(authToken, server, nameTag, valueTag) {
-    console.log("nameTag", authToken, nameTag, valueTag);
     return fetch(`${server}`, {
       method: "POST",
       headers: {
@@ -357,6 +390,8 @@ class Api {
           sortfield: "priority",
           sortorder: "DESC",
           hostids: hostIds, // Указываем список ID хостов
+          expandExpression: true,
+          expandDescription: true,
         },
         id: 3,
       }),
@@ -439,7 +474,6 @@ class Api {
 
   //Получения всех тегов с именем service
   getTagsWithService(authToken, server) {
-    console.log("authToken", authToken, "server", server);
     return fetch(`${server}`, {
       method: "POST",
       headers: {
@@ -458,9 +492,7 @@ class Api {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log("data", data);
         // Извлекаем только теги с именем "service"
-
         const serviceTags = [];
         data.result.forEach((host) => {
           if (host.tags) {

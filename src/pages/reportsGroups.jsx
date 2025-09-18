@@ -1,39 +1,28 @@
 import { useState } from "react";
-import { Select, Space, Button, Card, Spin } from "antd";
-import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
+import { Select, Space, Button, Card, Spin, ConfigProvider, theme } from "antd";
 import { api } from "../utils/Api";
 import exportToExcelDefault from "../utils/exportToExcel";
-import exportToExcelHostsWithGroups from "../utils/exportToExcelHostsWithGroups";
+import exportToExcelGroupForTriggers from "../utils/exportToExcelGroupForTriggers";
+import exportToExcelHosts from "../utils/exportToExcelHosts";
 import TableHostsWithGroups from "../components/table/TableHostsWithGroups";
-import { PASSWORD, USER_NAME, ZABBIX_SERVER } from "../utils/constants";
+import { ZABBIX_SERVER, TOKEN } from "../utils/constants";
 import "./reportsGroups.css"; // Подключаем стили
+import TableTriggersDark from "../components/table/TableTriggersDark";
 
 const ReportsGroups = () => {
   const { Option } = Select;
 
   const [dataZabbix, setDataZabbix] = useState();
+  const [dataTriggers, setDataTriggers] = useState();
   const [dataZabbixHosts, setDataZabbixHosts] = useState();
-  const [server, setServer] = useState(ZABBIX_SERVER);
-  const [userName, setUserName] = useState(USER_NAME);
-  const [password, setPassword] = useState(PASSWORD);
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState([]);
-  const [token, setToken] = useState();
   const [selectedValueGroup, setSelectedValueGroup] = useState(null);
 
   const HandleGetGroups = async () => {
     setLoading(true);
     try {
-      const data = {
-        userName: userName,
-        password: password,
-        server: server,
-      };
-
-      const tempToken = await api.getApi(data);
-      setToken(tempToken.result);
-
-      const tempGroups = await api.getGroups(tempToken.result, server);
+      const tempGroups = await api.getGroups(TOKEN, ZABBIX_SERVER);
       setGroups(tempGroups.result);
     } catch (error) {
       console.log("Ошибка в запросе", error);
@@ -45,19 +34,19 @@ const ReportsGroups = () => {
   const flattenZabbixData = (groups = []) => {
     const flatList = [];
 
-    groups.forEach(group => {
+    groups.forEach((group) => {
       const groupName = group.name;
 
       if (Array.isArray(group.hosts) && group.hosts.length > 0) {
-        group.hosts.forEach(host => {
+        group.hosts.forEach((host) => {
           flatList.push({
-            name: groupName,                // Название группы
-            host: host.name || "-",         // Имя хоста
-            hostid: host.hostid || "-",     // ID хоста
+            name: groupName, // Название группы
+            host: host.name || "-", // Имя хоста
+            hostid: host.hostid || "-", // ID хоста
             description: host.description || "-", // Описание
-            interfaces: host.interfaces || [],    // Интерфейсы (может быть пусто)
-            tags: host.tags || [],               // Теги
-            status: host.status || "-",          // Статус
+            interfaces: host.interfaces || [], // Интерфейсы (может быть пусто)
+            tags: host.tags || [], // Теги
+            status: host.status || "-", // Статус
           });
         });
       }
@@ -67,18 +56,16 @@ const ReportsGroups = () => {
   };
 
   const clickButtonGetAllHostsByNameHostGroup = async () => {
-    setDataZabbix(null);
+    // setDataZabbix(null);
+    setDataTriggers(null);
     setLoading(true);
-    const data = {
-      userName: userName,
-      password: password,
-      server: server,
-    };
-
     try {
-      const tempGroups = await api.getHostsIdByNameGroup(token, selectedValueGroup, server)
+      const tempGroups = await api.getHostsIdByNameGroup(
+        TOKEN,
+        selectedValueGroup,
+        ZABBIX_SERVER
+      );
       setDataZabbixHosts(flattenZabbixData(tempGroups.result));
-
     } catch (error) {
       console.log("Ошибка в запросе", error);
     } finally {
@@ -86,68 +73,50 @@ const ReportsGroups = () => {
     }
   };
 
-  const performApiRequests = (res) => {
-    // Список значений для запроса
+  const performApiRequests = async () => {
+    setDataZabbix(null);
+    setDataZabbixHosts(null);
+    setLoading(true);
+    let alltrigers = [];
+    try {
+      const temp = await api.getHostsIdByNameGroup(
+        TOKEN,
+        selectedValueGroup,
+        ZABBIX_SERVER
+      );
 
-    // Храним все обещания для запросов
-    const requests = groups.map((service) =>
-      api
-        .getAllHostsByService(res.result, server, "service", service)
-        .then((response) => ({ service, response }))
-        .catch((error) => ({ service, error }))
-    );
+      // Формируем массив промисов
+      const requests = temp.result[0].hosts.map((item) =>
+        api.getAllTriggersByHost(TOKEN, ZABBIX_SERVER, item.hostid)
+      );
+      const results = await Promise.allSettled(requests);
 
-    Promise.all(requests)
-      .then((results) => {
-        const allHosts = [];
-
-        results.forEach(({ service, response, error }) => {
-          if (error) {
-            console.error(`Ошибка для сервиса ${service}:`, error);
-          } else {
-            console.log(`Результаты для сервиса ${service}:`, response);
-            allHosts.push(...response.result); // Добавляем все хосты для данного сервиса
-          }
-        });
-
-        const hostIds = allHosts.map((host) => host.hostid);
-
-        // Получение триггеров для всех хостов
-        api.getAllTriggersByHost(res.result, server, hostIds).then((ress) => {
-          // Создаем объект для быстрого поиска тегов по hostid
-          const triggers = mergeTagsIntoTriggers(allHosts, ress.result);
-          setDataZabbix(triggers);
-          console.log("triggers", triggers);
-          // setLoad(false);
-        });
-      })
-      .catch((error) => {
-        // setLoad(false);
-        console.error("Общая ошибка выполнения запросов:", error);
+      results.forEach((item) => {
+        if (item.status === "fulfilled") {
+          alltrigers.push(...item.value.result);
+        }
       });
+
+      const data = mergeTagsIntoTriggers(temp.result[0].hosts, alltrigers);
+      console.log("data", data);
+      setDataTriggers(data);
+    } catch (err) {
+      console.error("Общая ошибка выполнения:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const clickButtonGetAllTriggers = (e) => {
-    setDataZabbixHosts();
     e.preventDefault();
-
-    const data = {
-      userName: userName,
-      password: password,
-      server: server,
-    };
-
-    api
-      .getApi(data)
-      .then((res) => {
-        performApiRequests(res);
-      })
-      .catch((res) => {
-        console.log(res);
-      });
+    setDataZabbixHosts(null);
+    performApiRequests();
   };
 
   function mergeTagsIntoTriggers(hostsArray, triggersArray) {
+    console.log("hostsArray", hostsArray);
+    console.log("triggersArray", triggersArray);
+    if (!hostsArray || !triggersArray) return [];
     // Создаем объект для быстрого поиска тегов по hostid
     const hostTagsMap = hostsArray.reduce((map, host) => {
       map[host.hostid] = host.tags || []; // Сопоставляем hostid с tags
@@ -173,15 +142,40 @@ const ReportsGroups = () => {
   }
 
   const exportToExcelDefaultService = () => {
-    if (dataZabbix) {
-      exportToExcelDefault(dataZabbix);
-    } else {
-      exportToExcelHostsWithGroups(dataZabbixHosts);
+    console.log("dataZabbixHosts", dataZabbixHosts);
+    console.log("dataTriggers", dataTriggers);
+    if (dataZabbixHosts) {
+      exportToExcelHosts(dataZabbixHosts);
+    }
+    if (dataTriggers) {
+      exportToExcelGroupForTriggers(dataTriggers);
     }
   };
 
   return (
-    <>
+    <ConfigProvider
+      theme={{
+        algorithm: theme.darkAlgorithm,
+        token: {
+          colorPrimary: "#7c3aed",
+          colorInfo: "#7c3aed",
+          colorBgBase: "#0b1221",
+          colorBgContainer: "#111a2c",
+          colorBorder: "#1e293b",
+          borderRadius: 12,
+          fontSize: 13,
+        },
+        components: {
+          Card: { headerBg: "#0f172a", colorBorderSecondary: "#1e293b" },
+          Table: {
+            headerBg: "#0f172a",
+            headerSplitColor: "#1e293b",
+            borderColor: "#1e293b",
+          },
+          Tag: { defaultColor: "#1f2937" },
+        },
+      }}
+    >
       {loading && (
         <div className="loading-overlay">
           <Spin size="large" />
@@ -215,7 +209,11 @@ const ReportsGroups = () => {
           >
             {groups &&
               groups.map((item, index) => (
-                <Option key={index} value={`${item.name}`} groupid={`${item.name}`}>
+                <Option
+                  key={index}
+                  value={`${item.name}`}
+                  groupid={`${item.name}`}
+                >
                   {item.name}
                 </Option>
               ))}
@@ -243,8 +241,8 @@ const ReportsGroups = () => {
           </Button>
           <Button
             variant="outlined"
-            onClick={exportToExcelDefaultService}
-            disabled={!dataZabbixHosts || dataZabbixHosts.length === 0}
+            onClick={() => exportToExcelDefaultService(dataZabbixHosts)} // ХОСТЫ
+            disabled={(!dataZabbixHosts || dataZabbixHosts.length === 0) && (!dataTriggers || dataTriggers.length === 0)}
           >
             Export in Excel
           </Button>
@@ -252,25 +250,21 @@ const ReportsGroups = () => {
       </Space>
 
       <main className="main">
-        {(dataZabbixHosts) && (
+        {dataZabbixHosts && (
           <div className="table">
             {dataZabbixHosts && (
               <TableHostsWithGroups dataZabbixHosts={dataZabbixHosts} />
             )}
-            <Button
-              variant="outlined"
-              onClick={exportToExcelDefaultService}
-              disabled={
-                (!dataZabbixHosts || dataZabbixHosts.length === 0)
-              }
-              startIcon={<DownloadForOfflineIcon />}
-            >
-              Export in Excel
-            </Button>
           </div>
         )}
+        {/* Таблица триггеров */}
+        {Array.isArray(dataTriggers) && dataTriggers.length > 0 && (
+          <Card size="small" title="Триггеры">
+            <TableTriggersDark rows={dataTriggers} loading={loading} />
+          </Card>
+        )}
       </main>
-    </>
+    </ConfigProvider>
   );
 };
 

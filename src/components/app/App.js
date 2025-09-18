@@ -10,6 +10,7 @@ import ReportsScripts from "../../pages/reportsScripts";
 import ReportsGroups from "../../pages/reportsGroups";
 import ReportError from "../../pages/reportError";
 import ReportLoop from "../../pages/reportLoop";
+import Macros from "../../pages/macros";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/replaces" element={<Replaces />} />
           <Route path="/reportsError" element={<ReportError />} />
           <Route path="/reportsLoop" element={<ReportLoop />} />
+          <Route path="/macros" element={<Macros />} />
 
         </Routes>
       </ConfigProvider>

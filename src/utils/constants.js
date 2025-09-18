@@ -1,8 +1,8 @@
-export const USER_NAME = "123";
-export const PASSWORD = "234";
+export const USER_NAME = "133";
+export const PASSWORD = "123";
 export const ZABBIX_SERVER = "https://zabbix.ru/api_jsonrpc.php";
 export const URL_ZABBIX = "https://zabbix.ru";
-export const TOKEN = "123"
+export const TOKEN = "2"
 
 export const ALERTS_FOR_ZABBIX = [
   { warning: "2" },

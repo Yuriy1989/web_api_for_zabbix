@@ -6,7 +6,7 @@ import TableData from "../components/table/Table";
 import exportToExcelDefault from "../utils/exportToExcel";
 import exportToExcelHosts from "../utils/exportToExcelHosts";
 import TableDataHosts from "../components/table/TableHosts";
-import { PASSWORD, USER_NAME, ZABBIX_SERVER } from "../utils/constants";
+import { PASSWORD, USER_NAME, ZABBIX_SERVER, TOKEN } from "../utils/constants";
 import "./reportServices.css"; // Подключаем стили
 const { Option } = Select;
 const { Text } = Typography;
@@ -33,11 +33,7 @@ const ReportServices = () => {
         password: password,
         server: server,
       };
-
-      const token = await api.getApi(data);
-      setToken(token.result);
-
-      const services = await api.getTagsWithService(token.result, server);
+      const services = await api.getTagsWithService(TOKEN, server);
       const uniqueTags = [...new Set(services)];
       // Формирование массива options
       const options = uniqueTags.map((tag) => ({
@@ -63,7 +59,7 @@ const ReportServices = () => {
     try {
       for (const service of selectedValueService) {
         const hosts = await api.getAllHostsByService(
-          token,
+          TOKEN,
           server,
           nameService,
           service
@@ -87,7 +83,7 @@ const ReportServices = () => {
     try {
       for (const service of selectedValueService) {
         const hosts = await api.getAllHostsByService(
-          token,
+          TOKEN,
           server,
           nameService,
           service
@@ -95,7 +91,7 @@ const ReportServices = () => {
         allHosts = [...allHosts, ...hosts.result];
         const hostIds = allHosts.map((host) => host.hostid);
         const tempTriggers = await api.getAllTriggersByHost(
-          token,
+          TOKEN,
           server,
           hostIds
         );

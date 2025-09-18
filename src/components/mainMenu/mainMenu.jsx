@@ -36,8 +36,19 @@ const items = [
         key: 'setting:5',
       },
       {
-        label: (<NavLink to='/reportsLoop'>Отчеты по событиям, по Шаблонам</NavLink>),
+        label: (<NavLink to='/reportsLoop'>Отчеты по событиям, в разрезе групп</NavLink>),
         key: 'setting:6',
+      },
+    ]
+  },
+  {
+    key: 'macros',
+    icon: <ExceptionOutlined />,
+    label: 'Macros',
+    children: [
+      {
+        label: (<NavLink to='/macros'>Внесение изменения в макросы</NavLink>),
+        key: 'setting:7',
       },
     ]
   },
