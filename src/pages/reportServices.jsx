@@ -1,26 +1,22 @@
 import { useState } from "react";
-import { ConfigProvider, Select, Space, Button, Card, Spin, Typography, theme } from "antd";
+import { ConfigProvider, Select, Space, Button, Card, Spin, theme } from "antd";
 import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
 import { api } from "../utils/Api";
 import TableData from "../components/table/Table";
 import exportToExcelDefault from "../utils/exportToExcel";
 import exportToExcelHosts from "../utils/exportToExcelHosts";
 import TableDataHosts from "../components/table/TableHosts";
-import { PASSWORD, USER_NAME, ZABBIX_SERVER, TOKEN } from "../utils/constants";
+import { ZABBIX_SERVER, TOKEN } from "../utils/constants";
 import "./reportServices.css"; // Подключаем стили
 const { Option } = Select;
-const { Text } = Typography;
 
 const ReportServices = () => {
   const [dataZabbix, setDataZabbix] = useState();
   const [dataZabbixHosts, setDataZabbixHosts] = useState();
-  const [server, setServer] = useState(ZABBIX_SERVER);
-  const [userName, setUserName] = useState(USER_NAME);
-  const [password, setPassword] = useState(PASSWORD);
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState([]);
-  const [token, setToken] = useState();
   const [selectedValueService, setSelectedValueService] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [nameService, setNameService] = useState("service");
 
   //Запрос на выгрузку всех сервисов в Zabbix
@@ -28,12 +24,7 @@ const ReportServices = () => {
     setLoading(true);
 
     try {
-      const data = {
-        userName: userName,
-        password: password,
-        server: server,
-      };
-      const services = await api.getTagsWithService(TOKEN, server);
+      const services = await api.getTagsWithService(TOKEN, ZABBIX_SERVER);
       const uniqueTags = [...new Set(services)];
       // Формирование массива options
       const options = uniqueTags.map((tag) => ({
@@ -60,7 +51,7 @@ const ReportServices = () => {
       for (const service of selectedValueService) {
         const hosts = await api.getAllHostsByService(
           TOKEN,
-          server,
+          ZABBIX_SERVER,
           nameService,
           service
         );
@@ -84,7 +75,7 @@ const ReportServices = () => {
       for (const service of selectedValueService) {
         const hosts = await api.getAllHostsByService(
           TOKEN,
-          server,
+          ZABBIX_SERVER,
           nameService,
           service
         );
@@ -92,7 +83,7 @@ const ReportServices = () => {
         const hostIds = allHosts.map((host) => host.hostid);
         const tempTriggers = await api.getAllTriggersByHost(
           TOKEN,
-          server,
+          ZABBIX_SERVER,
           hostIds
         );
         console.log("triggers", tempTriggers.result);

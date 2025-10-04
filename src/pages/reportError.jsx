@@ -1,11 +1,21 @@
 // reportError.jsx
 import { useMemo, useState } from "react";
-import { ConfigProvider, theme, Space, Button, Card, Spin, Checkbox, Typography, Divider } from "antd";
+import {
+  ConfigProvider,
+  theme,
+  Space,
+  Button,
+  Card,
+  Spin,
+  Checkbox,
+  Typography,
+  Divider,
+} from "antd";
 import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
 import { api } from "../utils/Api";
 import DublicateIPAntd from "../components/table/DublicateIP";
 import exportToExcelDefault from "../utils/exportToExcelDublicateIP";
-import { PASSWORD, USER_NAME, ZABBIX_SERVER } from "../utils/constants";
+import { TOKEN, ZABBIX_SERVER } from "../utils/constants";
 import "./reportError.css";
 
 // --- утилита взять значение тега service
@@ -47,7 +57,7 @@ const flattenDuplicateIps = (groups = []) =>
       name: h?.name ?? "",
       status: h?.status ?? "",
       service: h?.service ?? "",
-    }))
+    })),
   );
 
 // --- распознать IP-макрос {#SOMETHING}
@@ -81,9 +91,16 @@ const ReportError = () => {
   const HandleGetDoubleIpHosts = async () => {
     setLoading(true);
     try {
-      const auth = { userName: USER_NAME, password: PASSWORD, server: ZABBIX_SERVER };
-      const token = await api.getApi(auth);
-      const hostsPayload = await api.getAllHosts(token?.result, ZABBIX_SERVER);
+      // Работаем сразу с API-токеном (Bearer)
+      const hostsPayload = await api.getAllHosts(TOKEN, ZABBIX_SERVER);
+
+      if (hostsPayload?.error) {
+        console.error("Zabbix error:", hostsPayload.error);
+        throw new Error(
+          hostsPayload?.error?.data || hostsPayload?.error?.message || "Zabbix error",
+        );
+      }
+
       const list = hostsPayload?.result || [];
       setHosts(list);
       setDuplicateIps(findDuplicateIps(hostsPayload));
@@ -111,10 +128,10 @@ const ReportError = () => {
       theme={{
         algorithm: theme.darkAlgorithm,
         token: {
-          colorPrimary: "#7c3aed",     // фиолетовый акцент
+          colorPrimary: "#7c3aed",
           colorInfo: "#7c3aed",
-          colorBgBase: "#0b1221",      // общий фон
-          colorBgContainer: "#111a2c", // фон карточек/таблиц
+          colorBgBase: "#0b1221",
+          colorBgContainer: "#111a2c",
           colorBorder: "#1e293b",
           borderRadius: 12,
           fontSize: 13,
@@ -136,7 +153,7 @@ const ReportError = () => {
         <Card
           title={<Text strong style={{ fontSize: 16 }}>Проверка задублирование IP адресов</Text>}
           size="small"
-          bordered
+          variant="outlined"            // ← вместо deprecated bordered
           styles={{ body: { paddingTop: 12, paddingBottom: 12 } }}
         >
           <Space wrap>
@@ -155,25 +172,28 @@ const ReportError = () => {
               checked={hideMacroIps}
               onChange={(e) => setHideMacroIps(e.target.checked)}
             >
-              Скрывать IP-макросы вида {'{#...}'}
+              Скрывать IP-макросы вида {"{#...}"}
             </Checkbox>
           </Space>
         </Card>
 
-        <Card size="small">
+        <Card size="small" variant="outlined">
           <Space split={<Divider type="vertical" style={{ borderColor: "#334155" }} />}>
-            <Text>Всего хостов: <Text strong>{totalHosts}</Text></Text>
-            <Text>Групп с задублированными IP: <Text strong>{totalDupGroups}</Text></Text>
+            <Text>
+              Всего хостов: <Text strong>{totalHosts}</Text>
+            </Text>
+            <Text>
+              Групп с задублированными IP: <Text strong>{totalDupGroups}</Text>
+            </Text>
             {(hideSameHost || hideMacroIps) && (
-              <Text>Показано: <Text strong>{totalDupGroupsShown}</Text></Text>
+              <Text>
+                Показано: <Text strong>{totalDupGroupsShown}</Text>
+              </Text>
             )}
           </Space>
         </Card>
 
-        <Card
-          size="small"
-          styles={{ body: { paddingTop: 10, paddingBottom: 10 } }}
-        >
+        <Card size="small" variant="outlined" styles={{ body: { paddingTop: 10, paddingBottom: 10 } }}>
           <Button
             onClick={exportToExcelDefaultService}
             disabled={(filteredDuplicateIps?.length ?? 0) === 0}

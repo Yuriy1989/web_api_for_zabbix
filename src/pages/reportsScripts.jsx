@@ -1,28 +1,19 @@
-import { useEffect, useState } from "react";
-import { Select, Space, Button, Card, Spin, Switch  } from "antd";
+import { useState } from "react";
+import { Select, Space, Button, Card, Spin  } from "antd";
 
 import { api } from "../utils/Api";
 import exportToExcelHostsWithScripts from "../utils/exportToExcelHostsWithScripts";
 import "./reportsScripts.css"; // Подключаем стили
 import TableHostsWithScripts from "../components/table/TableHostsWithScripts";
-import { PASSWORD, USER_NAME, ZABBIX_SERVER } from "../utils/constants";
+import { ZABBIX_SERVER, TOKEN } from "../utils/constants";
 
 const ReportsScripts = () => {
   const { Option } = Select;
 
   const [dataZabbix, setDataZabbix] = useState();
-  const [server, setServer] = useState(ZABBIX_SERVER);
-  const [userName, setUserName] = useState(USER_NAME);
-  const [password, setPassword] = useState(PASSWORD);
   const [services, setServices] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [token, setToken] = useState();
-  const [darkMode, setDarkMode] = useState(false);
-
-  useEffect(() => {
-    document.body.classList.toggle("dark-mode", darkMode);
-  }, [darkMode]);
 
   const exportToExcelDefaultService = () => {
     exportToExcelHostsWithScripts(dataZabbix);
@@ -32,16 +23,7 @@ const ReportsScripts = () => {
     setLoading(true);
 
     try {
-      const data = {
-        userName: userName,
-        password: password,
-        server: server,
-      };
-
-      const token = await api.getApi(data);
-      setToken(token.result);
-
-      const services = await api.getTagsWithService(token.result, server);
+      const services = await api.getTagsWithService(TOKEN, ZABBIX_SERVER);
       console.log(services);
       const uniqueTags = [...new Set(services)];
       console.log(uniqueTags);
@@ -64,14 +46,14 @@ const ReportsScripts = () => {
     try {
       const service = "service";
       const hostsResponse = await api.getAllHostsByService(
-        token,
-        server,
+        TOKEN,
+        ZABBIX_SERVER,
         service,
         selectedTemplate
       );
       const hosts = hostsResponse?.result.map((item) => item.hostid);
 
-      const items = await api.getItemByHosts(token, server, hosts);
+      const items = await api.getItemByHosts(TOKEN, ZABBIX_SERVER, hosts);
       console.log("items", items);
 
       const transformedItems = items?.result.map((item) => {

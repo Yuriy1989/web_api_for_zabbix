@@ -36,7 +36,7 @@ const items = [
         key: 'setting:5',
       },
       {
-        label: (<NavLink to='/reportsLoop'>Отчеты по событиям, в разрезе групп</NavLink>),
+        label: (<NavLink to='/reportsLoop'>Отчеты по событиям</NavLink>),
         key: 'setting:6',
       },
     ]

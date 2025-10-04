@@ -22,10 +22,9 @@ git clone https://github.com/Yuriy1989/web_api_for_zabbix.git
 ```
 3. Нужно указать учетную запись и адрес сервера zabbix для работы приложения в файле ./src/utils/constants.js
 ```js
-export const USER_NAME = "Admin";
-export const PASSWORD = "zabbix";
 export const ZABBIX_SERVER = "http://192.168.2.4:8080/api_jsonrpc.php";
 export const URL_ZABBIX = "https://zabbix.home.ru"; //указать полное доменное имя адреса сервера
+export const TOKEN = "zabbix";
 ```
 4. После этого необходимо собрать и запустить наше приложение.
 ```bash

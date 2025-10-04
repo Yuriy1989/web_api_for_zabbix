@@ -4,22 +4,16 @@ import { Select, Space, Button, Card, Spin } from "antd";
 import { api } from "../utils/Api";
 import TableData from "../components/table/Table";
 import exportToExcelDefault from "../utils/exportToExcel";
-import exportToExcelHosts from "../utils/exportToExcelHosts";
-import TableDataHosts from "../components/table/TableHosts";
-import { PASSWORD, USER_NAME, ZABBIX_SERVER } from "../utils/constants";
+import { TOKEN, ZABBIX_SERVER } from "../utils/constants";
 import "./reportsTemplates.css"; // Подключаем стили
 
 const ReportsTemplates = () => {
   const { Option } = Select;
 
   const [dataZabbix, setDataZabbix] = useState();
-  const [server, setServer] = useState(ZABBIX_SERVER);
-  const [userName, setUserName] = useState(USER_NAME);
-  const [password, setPassword] = useState(PASSWORD);
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [token, setToken] = useState();
 
   const exportToExcelDefaultService = () => {
     if (dataZabbix) {
@@ -31,17 +25,7 @@ const ReportsTemplates = () => {
     setLoading(true);
 
     try {
-
-      const data = {
-        userName: userName,
-        password: password,
-        server: server,
-      };
-
-      const tempToken = await api.getApi(data);
-      setToken(tempToken.result);
-
-      const templates = await api.getTemplates(tempToken.result, server);
+      const templates = await api.getTemplates(TOKEN, ZABBIX_SERVER);
       console.log("templates", templates);
       setTemplates(templates.result);
 
@@ -56,7 +40,7 @@ const ReportsTemplates = () => {
     setLoading(true);
 
     try {
-        const hostsResponse = await api.getAllHostsByTemplates(token, server, selectedTemplate);
+        const hostsResponse = await api.getAllHostsByTemplates(TOKEN, ZABBIX_SERVER, selectedTemplate);
         const hosts = hostsResponse?.result || []; // Безопасное извлечение списка хостов
 
         if (hosts.length === 0) {
@@ -65,7 +49,7 @@ const ReportsTemplates = () => {
         }
 
         const hostIds = hosts.map(host => host.hostid); // Получаем список hostid
-        const triggersResponse = await api.getTriggers(token, server, hostIds);
+        const triggersResponse = await api.getTriggers(TOKEN, ZABBIX_SERVER, hostIds);
         const triggers = triggersResponse?.result || [];
 
         setDataZabbix(triggers);

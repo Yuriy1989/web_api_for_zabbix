@@ -28,6 +28,7 @@ const uniqueServicesFromHosts = (hosts = []) => {
 };
 
 const DublicateIPAntd = ({ dataZabbix = [] }) => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const safeData = Array.isArray(dataZabbix) ? dataZabbix : [];
   const [pagination, setPagination] = useState({
     current: 1,
@@ -61,19 +62,13 @@ const DublicateIPAntd = ({ dataZabbix = [] }) => {
     return [...set].sort().map((s) => ({ text: s, value: s }));
   }, [dataSource]);
 
-  // --- поиск в колонках (AntD шаблон)
-  const [searchText, setSearchText] = useState("");
-  const [searchedColumn, setSearchedColumn] = useState("");
   const searchInput = useRef(null);
 
   const handleSearch = (selectedKeys, confirm, dataIndex) => {
     confirm();
-    setSearchText(selectedKeys[0] || "");
-    setSearchedColumn(dataIndex);
   };
   const handleReset = (clearFilters) => {
     clearFilters?.();
-    setSearchText("");
   };
 
   const getColumnSearchProps = (dataIndex, placeholder = "Search") => ({
@@ -115,8 +110,6 @@ const DublicateIPAntd = ({ dataZabbix = [] }) => {
             size="small"
             onClick={() => {
               confirm({ closeDropdown: false });
-              setSearchText(selectedKeys?.[0] || "");
-              setSearchedColumn(dataIndex);
             }}
           >
             Filter
@@ -134,8 +127,11 @@ const DublicateIPAntd = ({ dataZabbix = [] }) => {
       const v = (record?.[dataIndex] ?? "").toString().toLowerCase();
       return v.includes((value ?? "").toString().toLowerCase());
     },
-    onFilterDropdownOpenChange: (visible) => {
-      if (visible) setTimeout(() => searchInput.current?.select(), 100);
+    // ⬇️ antd v5: вместо onFilterDropdownOpenChange
+    filterDropdownProps: {
+      onOpenChange: (open) => {
+        if (open) setTimeout(() => searchInput.current?.select?.(), 100);
+      },
     },
     render: (text) => text,
   });
