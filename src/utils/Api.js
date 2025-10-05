@@ -430,9 +430,6 @@ class Api {
           sortfield: "priority",
           sortorder: "DESC",
           hostids: hostIds,
-          // filter: {
-          //   priority: [1, 2, 3], // Только disaster и high
-          // },
           time_from: timeFrom,
           time_till: timeTill,
         },
@@ -443,8 +440,9 @@ class Api {
       .catch(console.log);
   }
 
-  //Быстрый подсчёт количества событий PROBLEM по ВСЕМ хостам
-  // за период и выбранные severity
+  // === БЫСТРЫЙ СУММАРНЫЙ ПОДСЧЁТ (все хосты) ===
+  // Быстрый подсчёт количества событий PROBLEM по ВСЕМ хостам
+  // за период и выбранные severity, с опцией включать/не включать события в maintenance (MM)
   async getEventCountsAll(
     authToken,
     server,
@@ -453,68 +451,87 @@ class Api {
     severitiesValues = [],
     opts = {}
   ) {
+    // валидация входа
     if (!Array.isArray(severitiesValues) || severitiesValues.length === 0)
       return {};
+    const start = Number(timeFrom);
+    const end = Number(timeTill);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end)
+      return {};
+
+    // опции
     const {
       onProgress,
-      windowDays = 14,
-      timeoutMs = 20000,
-      pauseMs = 120,
+      windowDays = 14, // размер окна в днях (для устойчивости к тайм-аутам)
+      timeoutMs = 20000, // таймаут одного RPC
+      pauseMs = 120, // пауза между окнами
+      includeSuppressedMM = false, // по умолчанию как в Problems/History (MM скрыты)
     } = opts;
-    // 14-дневные окна, чтоб не бить по БД гигантским сканом
+
+    // уникальные severities (на всякий случай)
+    const severities = [...new Set(severitiesValues.map((v) => String(v)))];
+
+    // полуоткрытые окна [from; next-1], кроме последнего, где до end включительно
     const WINDOW = Number(windowDays) * 24 * 60 * 60;
     const windows = [];
-    for (let t = Number(timeFrom); t < Number(timeTill); t += WINDOW) {
-      const a = t;
-      const b = Math.min(t + WINDOW, Number(timeTill));
-      windows.push([a, b]);
+    for (let t = start; t < end; t += WINDOW) {
+      const next = Math.min(t + WINDOW, end);
+      const isLast = next === end;
+      windows.push([t, isLast ? next : next - 1]);
     }
-    const totalWindows = windows.length;
-    // сумматор по severity
-    const totals = Object.fromEntries(
-      severitiesValues.map((s) => [String(s), 0])
-    );
 
-    // идём последовательно по окнам (чтобы не словить rate-limit/таймауты)
+    const totals = Object.fromEntries(severities.map((s) => [s, 0]));
+    const totalWindows = windows.length;
+
+    // итерируем последовательно по окнам; внутри окна — параллельно по severity
     for (let w = 0; w < windows.length; w++) {
       const [tf, tt] = windows[w];
-      // по окну — параллельно по severity, но с увеличенным timeout
+
       const batch = await Promise.all(
-        severitiesValues.map((sev, i) =>
-          this.rpc({
+        severities.map(async (sev, i) => {
+          const base = {
+            source: 0,
+            object: 0, // объект: trigger
+            value: 1,
+            time_from: tf,
+            time_till: tt,
+            severities: [Number(sev)],
+            symptom: false, // ← брать только cause
+            countOutput: true,
+          };
+          const params = includeSuppressedMM
+            ? base
+            : { ...base, suppressed: false };
+          const cnt = await this.rpc({
             server,
             auth: authToken,
             method: "event.get",
-            params: {
-              value: 1,
-              time_from: tf,
-              time_till: tt,
-              trigger_severities: [sev],
-              countOutput: true,
-            },
-            id: 8000 + w * 20 + i,
+            params,
+            id: 8000 + w * 40 + i,
             timeoutMs,
           })
-            .then((res) => Number(res) || 0)
-            .catch(() => 0)
-        )
+            .then((r) => Number(r) || 0)
+            .catch(() => 0);
+          return [sev, cnt];
+        })
       );
-      batch.forEach((cnt, idx) => {
-        const key = String(severitiesValues[idx]);
-        totals[key] = (totals[key] || 0) + cnt;
-      });
+
+      // суммируем
+      for (const [sev, cnt] of batch) {
+        totals[sev] = (totals[sev] || 0) + (cnt || 0);
+      }
+
+      // прогресс + бэкофф
       if (typeof onProgress === "function") onProgress(w + 1, totalWindows);
-      // лёгкий backoff между окнами
-      await new Promise((r) => setTimeout(r, pauseMs));
+      if (pauseMs > 0 && w < windows.length - 1) {
+        await new Promise((r) => setTimeout(r, pauseMs));
+      }
     }
 
     return totals;
   }
 
-  /**
-   * Разбивка по дням (все хосты): для каждого дня и каждого severity — countOutput: true.
-   * Возвращает массив дней: [{ date: 'YYYY-MM-DD', counts: { '3': n, '4': n, ... } }, ...]
-   */
+  // === РАЗБИВКА ПО ДНЯМ (все хосты) ===
   async getEventCountsAllByDay(
     authToken,
     server,
@@ -530,73 +547,129 @@ class Api {
     const end = Number(timeTill);
     const daySec = 24 * 60 * 60;
 
-    const days = [];
-    for (let t = start; t < end; t += daySec) {
-      days.push([t, Math.min(t + daySec, end)]);
-    }
     const {
       concurrency = 3,
       timeoutMs = 20000,
       pauseMs = 80,
       onProgress,
+      includeSuppressedMM = true,
     } = opts;
-    const totalDays = days.length;
 
-    // ограничим одновременные RPC, чтобы не перегружать Zabbix и сеть
+    // генерируем полуоткрытые интервалы по дням
+    const days = [];
+    for (let t = start; t < end; t += daySec) {
+      const next = Math.min(t + daySec, end);
+      const isLast = next === end;
+      days.push([t, isLast ? next : next - 1]);
+    }
+
     const queue = [...days];
     const results = [];
     let done = 0;
 
-    // воркер обрабатывает по одному дню: для дня — параллельно по severity
     const worker = async () => {
       while (queue.length) {
         const [tf, tt] = queue.shift();
+
         const batch = await Promise.all(
-          severitiesValues.map((sev, i) =>
-            this.rpc({
+          severitiesValues.map(async (sev, i) => {
+            const base = {
+              source: 0,
+              object: 0, // объект: trigger
+              value: 1,
+              time_from: tf,
+              time_till: tt,
+              severities: [Number(sev)],
+              symptom: false, // ← брать только cause
+              countOutput: true,
+            };
+            const params = includeSuppressedMM
+              ? base
+              : { ...base, suppressed: false };
+            const cnt = await this.rpc({
               server,
               auth: authToken,
               method: "event.get",
-              params: {
-                value: 1,
-                time_from: tf,
-                time_till: tt,
-                trigger_severities: [sev],
-                countOutput: true,
-              },
-              id: 9000 + tf + i, // уникальность не критична, лишь для отладки
-              timeoutMs, // 20 сек на день+severity
+              params,
+              id: 9000 + tf + i,
+              timeoutMs,
             })
-              .then((res) => [String(sev), Number(res) || 0])
-              .catch(() => [String(sev), 0])
-          )
+              .then((r) => Number(r) || 0)
+              .catch(() => 0);
+            return [String(sev), cnt];
+          })
         );
+
         results.push({
           time_from: tf,
           time_till: tt,
           counts: Object.fromEntries(batch),
         });
+
         done += 1;
-        if (typeof onProgress === "function") onProgress(done, totalDays);
-        // маленькая пауза, чтобы не долбить сервер
+        if (typeof onProgress === "function") onProgress(done, days.length);
         await new Promise((r) => setTimeout(r, pauseMs));
       }
     };
 
-    // запустим N воркеров
-    const workers = Array.from({ length: concurrency }, () => worker());
-    await Promise.all(workers);
-
-    // вернём в исходном порядке по времени
+    await Promise.all(Array.from({ length: concurrency }, () => worker()));
     results.sort((a, b) => a.time_from - b.time_from);
     return results;
   }
 
-  /**
-   * Разбивка по месяцам (все хосты): для каждого месяца и каждого severity — countOutput: true.
-   * Возвращает массив: [{ time_from, time_till, counts: { '3': n, '4': n, ... } }, ...]
-   * opts: { concurrency=2, timeoutMs=20000, pauseMs=120, onProgress }
-   */
+  // Список событий для аудита: показывает поштучно, с именем триггера
+  async getEventsAudit(
+    authToken,
+    server,
+    {
+      timeFrom,
+      timeTill,
+      severitiesValues = [],
+      includeSuppressedMM = false,
+      includeSymptoms = false,
+      timeoutMs = 20000,
+      limit = 10000, // чтобы не уронить браузер на очень длинных периодах
+    }
+  ) {
+    const params = {
+      source: 0, // события триггеров
+      object: 0, // объект: trigger
+      value: 1, // PROBLEM
+      time_from: Number(timeFrom),
+      time_till: Number(timeTill),
+      symptom: !!includeSymptoms ? true : false, // по умолчанию без симптомов
+      countOutput: false, // нужен список
+      output: [
+        "eventid",
+        "clock",
+        "severity",
+        "name",
+        "suppressed",
+        "r_eventid",
+      ],
+      selectRelatedObject: "extend", // получим триггер (description/priority и т.п.)
+      selectHosts: ["hostid", "name"],
+      sortfield: "clock",
+      sortorder: "ASC",
+      limit,
+    };
+    if (Array.isArray(severitiesValues) && severitiesValues.length) {
+      params.severities = severitiesValues.map(Number);
+    }
+    if (!includeSuppressedMM) {
+      params.suppressed = false; // как в GUI без "Show suppressed problems"
+    }
+    return this.rpc({
+      server,
+      auth: authToken,
+      method: "event.get",
+      params,
+      id: 12001,
+      timeoutMs,
+    });
+  }
+
+  // === РАЗБИВКА ПО МЕСЯЦАМ (все хосты) ===
   async getEventCountsAllByMonth(
     authToken,
     server,
@@ -613,12 +686,12 @@ class Api {
       timeoutMs = 20000,
       pauseMs = 120,
       onProgress,
+      includeSuppressedMM = true,
     } = opts;
 
     const start = Number(timeFrom);
     const end = Number(timeTill);
 
-    // UTC start of month
     const monthStartUTC = (ts) => {
       const d = new Date(ts * 1000);
       return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) / 1000;
@@ -633,11 +706,12 @@ class Api {
     while (cur < end) {
       const next = addMonthUTC(cur);
       const from = Math.max(cur, start);
-      const till = Math.min(next, end);
-      months.push([from, till, cur]); // cur — «ярлык» месяца
+      const tillRaw = Math.min(next, end);
+      const isLast = tillRaw === end;
+      const till = isLast ? tillRaw : tillRaw - 1; // полуоткрытый интервал
+      months.push([from, till, cur]);
       cur = next;
     }
-    const totalMonths = months.length;
 
     const queue = [...months];
     const results = [];
@@ -646,25 +720,34 @@ class Api {
     const worker = async () => {
       while (queue.length) {
         const [tf, tt, labelStart] = queue.shift();
+
         const batch = await Promise.all(
-          severitiesValues.map((sev, i) =>
-            this.rpc({
+          severitiesValues.map(async (sev, i) => {
+            const base = {
+              source: 0,
+              object: 0, // объект: trigger
+              value: 1,
+              time_from: tf,
+              time_till: tt,
+              severities: [Number(sev)],
+              symptom: false, // ← брать только cause
+              countOutput: true,
+            };
+            const params = includeSuppressedMM
+              ? base
+              : { ...base, suppressed: false };
+            const cnt = await this.rpc({
               server,
               auth: authToken,
               method: "event.get",
-              params: {
-                value: 1,
-                time_from: tf,
-                time_till: tt,
-                trigger_severities: [sev],
-                countOutput: true,
-              },
+              params,
               id: 9500 + labelStart + i,
               timeoutMs,
             })
-              .then((res) => [String(sev), Number(res) || 0])
-              .catch(() => [String(sev), 0])
-          )
+              .then((r) => Number(r) || 0)
+              .catch(() => 0);
+            return [String(sev), cnt];
+          })
         );
 
         results.push({
@@ -672,17 +755,19 @@ class Api {
           time_till: tt,
           counts: Object.fromEntries(batch),
         });
+
         done += 1;
-        if (typeof onProgress === "function") onProgress(done, totalMonths);
+        if (typeof onProgress === "function") onProgress(done, months.length);
         await new Promise((r) => setTimeout(r, pauseMs));
       }
     };
 
-    const workers = Array.from(
-      { length: Math.max(1, Math.min(concurrency, totalMonths)) },
-      () => worker()
+    await Promise.all(
+      Array.from(
+        { length: Math.max(1, Math.min(concurrency, months.length)) },
+        () => worker()
+      )
     );
-    await Promise.all(workers);
 
     results.sort((a, b) => a.time_from - b.time_from);
     return results;
@@ -706,14 +791,15 @@ class Api {
         jsonrpc: "2.0",
         method: "event.get",
         params: {
+          source: 0,
+          object: 0,
           hostids: hostIds,
-          output: "extend", // Запросим только количество событий
-          trigger_severities: severitiesValues,
+          output: "extend",
+          severities: severitiesValues, // ← тут
           value: 1,
-          time_from: timeFrom, // Начало временного интервала
-          time_till: timeTill, // Конец временного интервала
-          selectHosts: ["hostid", "name", "description"], // Связанные хосты
-          // suppressed: true,
+          time_from: timeFrom,
+          time_till: timeTill,
+          selectHosts: ["hostid", "name", "description"],
         },
         id: 3,
       }),

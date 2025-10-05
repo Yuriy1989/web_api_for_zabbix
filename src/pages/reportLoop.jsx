@@ -15,14 +15,18 @@ import {
   Flex,
   Progress,
   Segmented,
+  Checkbox,
+  Modal,
+  Tag,
 } from "antd";
 import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
-import { api } from "../utils/Api";
+import { api } from "../utils/ApiReportsEvent";
 import TableEventForTemplates from "../components/table/TableEventForTemplates";
 import SeverityCountersTable from "../components/table/SeverityCountersTable";
 import exportToExcelDefault from "../utils/exportToExcelEventForTemplates";
 import exportToExcelSeverityOnly from "../utils/exportToExcelSeverityOnly";
 import exportToExcelAllHostsDaily from "../utils/exportToExcelAllHostsDaily";
+import exportToExcelEventsAudit from "../utils/exportToExcelEventsAudit";
 import {
   ZABBIX_SERVER,
   TOKEN,
@@ -43,6 +47,9 @@ import "./reportLoop.css";
 
 const { Text, Title } = Typography;
 
+// флаг для мягкой самопроверки: по умолчанию выкл
+const CONSISTENCY_CHECK_ENABLED = false;
+
 const SEVERITY_COLORS = {
   0: "#64748b",
   1: "#3b82f6",
@@ -52,7 +59,13 @@ const SEVERITY_COLORS = {
   5: "#a21caf",
 };
 
-// --- helper: слить дубликаты периодов (YYYY-MM / YYYY-MM-DD) с суммированием по severity
+// Привести булевы флаги из API к нормальному boolean (строки "0"/"1")
+const asBool = (v) => v === true || v === 1 || v === "1";
+
+// --- считать из объекта по ключу '3' или 3
+const getCount = (obj, sev) => obj?.[String(sev)] ?? obj?.[Number(sev)] ?? 0;
+
+// --- helper: слить дубликаты периодов (YYYY-MM / YYYY-MM-DD)
 const dedupByPeriod = (rows = [], severities = []) => {
   const map = new Map();
   for (const r of rows) {
@@ -89,7 +102,7 @@ const FunnyLoadingOverlay = ({ visible, progress, label }) => {
     setTipIdx(0);
     const id = setInterval(() => setTipIdx((i) => (i + 1) % tips.length), 1600);
     return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   if (!visible) return null;
@@ -103,18 +116,26 @@ const FunnyLoadingOverlay = ({ visible, progress, label }) => {
             🐹
           </div>
           <div className="funny-paws">
-            <span>🐾</span><span>🐾</span><span>🐾</span><span>🐾</span>
+            <span>🐾</span>
+            <span>🐾</span>
+            <span>🐾</span>
+            <span>🐾</span>
           </div>
         </div>
 
-        <Text strong className="funny-title">{label || tips[tipIdx]}</Text>
+        <Text strong className="funny-title">
+          {label || tips[tipIdx]}
+        </Text>
         <Text type="secondary" className="funny-tip">
           {label ? tips[tipIdx] : "Подождите, всё посчитаем…"}
         </Text>
 
         <div className="loading-progress">
           {progress > 0 ? (
-            <Progress percent={progress} status={progress < 100 ? "active" : "normal"} />
+            <Progress
+              percent={progress}
+              status={progress < 100 ? "active" : "normal"}
+            />
           ) : (
             <Progress percent={30} status="active" showInfo={false} />
           )}
@@ -143,6 +164,9 @@ const ReportLoop = () => {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
 
+  // Показывать ли результаты (график/таблицы) для "все хосты"
+  const [hasRunAllHosts, setHasRunAllHosts] = useState(false);
+
   // ===== Старый функционал (по группам) =====
   const [groups, setGroups] = useState([]);
   const [selectedValueGroup, setSelectedValueGroup] = useState([]);
@@ -150,17 +174,27 @@ const ReportLoop = () => {
   const [alertsDataAll, setAlertsDataAll] = useState([]);
   const [aggRows, setAggRows] = useState([]);
 
-  // 🔢 Кол-во хостов по каждой выбранной группе { groupid: count }
+  // 🔢 Кол-во хостов по каждой выбранной группе
   const [groupHostCounts, setGroupHostCounts] = useState({});
 
   // ===== Новое: все хосты =====
   const [countsAllHosts, setCountsAllHosts] = useState({});
-  const [dailyAllHosts, setDailyAllHosts] = useState([]);     // [{date:'YYYY-MM-DD', counts:{'3':n,...}}]
+  const [dailyAllHosts, setDailyAllHosts] = useState([]); // [{date:'YYYY-MM-DD', counts:{'3':n,...}}]
   const [monthlyAllHosts, setMonthlyAllHosts] = useState([]); // [{date:'YYYY-MM',     counts:{'3':n,...}}]
 
   // Пагинация
   const [dailyPageSize, setDailyPageSize] = useState(14);
   const [monthlyPageSize, setMonthlyPageSize] = useState(12);
+
+  //Состояние для флага MM (влияет на агрегаты и на модалку)
+  const [includeMM, setIncludeMM] = useState(true);
+
+  // Отладка: список событий за период
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [debugLoading, setDebugLoading] = useState(false);
+  const [debugRows, setDebugRows] = useState([]); // нормализованные строки
+  const [debugSevFilter, setDebugSevFilter] = useState(null); // конкретный sev или null = все
+  const [debugProgress, setDebugProgress] = useState(0);
 
   // Пресет «неделя»
   const setLastWeek = () => {
@@ -244,6 +278,98 @@ const ReportLoop = () => {
     return [...counter.values()];
   };
 
+  // ===== Модалка аудита: учитывать чекбокс MM и метки Да/Нет =====
+  const openAuditModal = async () => {
+    const [fromPicked, tillPicked] = dateRange || [];
+    if (!fromPicked || !tillPicked) return;
+
+    setDebugOpen(true);
+    setDebugLoading(true);
+    setDebugProgress(0);
+    try {
+      const tf = dayjs(fromPicked).startOf("minute").unix();
+      const tt = dayjs(tillPicked).endOf("minute").unix();
+      const severities = (
+        debugSevFilter ? [debugSevFilter] : selectedValues
+      ).map(Number);
+
+      // includeMM: true → показываем и MM, и не-MM; false → только не-MM
+      const events = await api.getEventsAuditPaged(TOKEN, ZABBIX_SERVER, {
+        timeFrom: tf,
+        timeTill: tt,
+        severitiesValues: severities,
+        includeSuppressedMM: includeMM,
+        includeSymptoms: false,
+        timeoutMs: 20000,
+        windowSeconds: 6 * 3600,
+        perWindowLimit: 5000,
+        concurrency: 2,
+        pauseMs: 60,
+        onProgress: (done, total) => {
+          const pct = total > 0 ? Math.floor((done / total) * 100) : 100;
+          setDebugProgress(Math.min(100, pct));
+        },
+      });
+
+      const rows = (events || []).map((e) => {
+        const trig = e?.relatedObject || {};
+        const host = Array.isArray(e?.hosts) && e.hosts[0] ? e.hosts[0] : null;
+        return {
+          key: String(e.eventid),
+          eventid: String(e.eventid),
+          time: dayjs.unix(Number(e.clock)).format("YYYY-MM-DD HH:mm:ss"),
+          host: host?.name || "-",
+          hostid: host?.hostid || "",
+          trigger: trig?.description || e?.name || "",
+          severity: String(e.severity ?? ""),
+          severityLabel:
+            SEVERITY_LABELS[String(e.severity ?? "")] ||
+            String(e.severity ?? ""),
+          suppressed: asBool(e?.suppressed),
+          r_eventid: e?.r_eventid ? String(e.r_eventid) : "",
+        };
+      });
+      setDebugRows(rows);
+    } catch (err) {
+      console.warn("getEventsAuditPaged error:", err);
+      setDebugRows([]);
+    } finally {
+      setDebugLoading(false);
+      setDebugProgress(0);
+    }
+  };
+
+  const exportAuditToExcel = () => {
+    if ((debugRows?.length ?? 0) === 0) return;
+    const [from, till] = dateRange || [];
+    const periodText =
+      from && till
+        ? `${dayjs(from).format("YYYY-MM-DD HH:mm")} → ${dayjs(till).format(
+            "YYYY-MM-DD HH:mm"
+          )}`
+        : "";
+    const severityLabel =
+      debugSevFilter != null
+        ? SEVERITY_LABELS[String(debugSevFilter)] || String(debugSevFilter)
+        : "Выбранные";
+    const fileName =
+      from && till
+        ? `events_audit_${dayjs(from).format("YYYYMMDD_HHmm")}__${dayjs(
+            till
+          ).format("YYYYMMDD_HHmm")}.xlsx`
+        : "events_audit.xlsx";
+
+    exportToExcelEventsAudit({
+      rows: debugRows,
+      fileName,
+      periodText,
+      mmMode: includeMM
+        ? "показаны и в ММ, и вне ММ"
+        : "показаны только вне ММ",
+      severityLabel,
+    });
+  };
+
   const HandleGetAlertsInLoop = async () => {
     setLoading(true);
     try {
@@ -256,7 +382,7 @@ const ReportLoop = () => {
         selectedValueGroup
       );
 
-      // 👇 Дополнительно подтягиваем число хостов по каждой группе
+      // 👇 число хостов по каждой группе
       if ((selectedValueGroup?.length ?? 0) > 0) {
         try {
           const groupsWithHosts = await api.rpc({
@@ -270,13 +396,14 @@ const ReportLoop = () => {
             },
             id: 701,
             timeoutMs: 15000,
+            retries: 2,
           });
           const counts = {};
           (groupsWithHosts || []).forEach(
-            (g) => (counts[g.groupid] = (g.hosts?.length ?? 0))
+            (g) => (counts[g.groupid] = g.hosts?.length ?? 0)
           );
           setGroupHostCounts(counts);
-        } catch (e) {
+        } catch {
           setGroupHostCounts({});
         }
       } else {
@@ -316,7 +443,7 @@ const ReportLoop = () => {
     }
   };
 
-  // Короткая сводка по текущим данным «по группам»
+  // Короткая сводка по «по группам»
   const stats = useMemo(() => {
     const totalHostsFound = hosts?.length ?? 0;
     const totalAlerts = alertsDataAll?.length ?? 0;
@@ -356,7 +483,7 @@ const ReportLoop = () => {
     };
   }, [hosts, alertsDataAll, dateRange, selectedValues]);
 
-  // Сводка по выбранным группам: [{id,name,count}]
+  // Сводка по выбранным группам
   const selectedGroupsInfo = useMemo(() => {
     return (selectedValueGroup || []).map((gid) => {
       const g = (groups || []).find((x) => x.groupid === gid);
@@ -374,13 +501,15 @@ const ReportLoop = () => {
     if (!fromPicked || !tillPicked) return;
     if ((selectedValues?.length ?? 0) === 0) return;
 
+    setHasRunAllHosts(false);
     setLoading(true);
     setProgress(0);
     setProgressLabel("Подсчёт итогов…");
 
     try {
-      const tf = dayjs(fromPicked).unix();
-      const tt = dayjs(tillPicked).unix();
+      const tf = dayjs(fromPicked).startOf("minute").unix();
+      const tt = dayjs(tillPicked).endOf("minute").unix();
+      const includeSuppressedMM = !!includeMM;
 
       // 1) Суммарно
       const summary = await api.getEventCountsAll(
@@ -400,17 +529,62 @@ const ReportLoop = () => {
             }
           },
           windowDays: 14,
-          timeoutMs: 20000,
+          timeoutMs: 30000,
           pauseMs: 120,
+          includeSuppressedMM,
+          minWindowSeconds: 7200, // дробим до 2 часов при ошибках
+          rpcRetries: 2,
         }
       );
       setCountsAllHosts(summary || {});
+
+      // Мягкая самопроверка (по умолчанию выключена, и ещё не бежим на длинных периодах)
+      if (CONSISTENCY_CHECK_ENABLED && tt - tf <= 45 * 24 * 3600) {
+        try {
+          const totalByOneQuery = await api
+            .rpc({
+              server: ZABBIX_SERVER,
+              auth: TOKEN,
+              method: "event.get",
+              params: {
+                source: 0,
+                object: 0,
+                value: 1,
+                time_from: tf,
+                time_till: tt,
+                countOutput: true,
+                severities: selectedValues.map(Number),
+                ...(includeMM ? {} : { suppressed: false }),
+              },
+              id: 8100,
+              timeoutMs: 12000, // короткий таймаут, чтобы не висело
+              retries: 1,
+              silent: true, // не мусорим в консоль при таймауте
+            })
+            .then((n) => Number(n) || 0);
+
+          const totalBySum = selectedValues.reduce(
+            (s, sev) => s + (Number(summary?.[String(sev)]) || 0),
+            0
+          );
+
+          if (totalByOneQuery !== totalBySum) {
+            console.debug("Severity sum != single-query total", {
+              totalByOneQuery,
+              totalBySum,
+            });
+          }
+        } catch {
+          /* noop — это лишь самопроверка */
+        }
+      }
 
       if (splitMode === "total") {
         setProgressLabel("Готово");
         setTimeout(() => setProgress(0), 900);
         setDailyAllHosts([]);
         setMonthlyAllHosts([]);
+        setHasRunAllHosts(true);
         setLoading(false);
         return;
       }
@@ -426,12 +600,13 @@ const ReportLoop = () => {
           selectedValues,
           {
             concurrency: 3,
-            timeoutMs: 20000,
+            timeoutMs: 30000,
             pauseMs: 80,
             onProgress: (done, total) => {
               const pct = 30 + (total > 0 ? (done / total) * 70 : 70);
               setProgress(Math.min(100, Math.floor(pct)));
             },
+            includeSuppressedMM,
           }
         );
         const rows = (byDay || []).map((d) => ({
@@ -450,12 +625,13 @@ const ReportLoop = () => {
           selectedValues,
           {
             concurrency: 2,
-            timeoutMs: 20000,
+            timeoutMs: 30000,
             pauseMs: 120,
             onProgress: (done, total) => {
               const pct = 30 + (total > 0 ? (done / total) * 70 : 70);
               setProgress(Math.min(100, Math.floor(pct)));
             },
+            includeSuppressedMM,
           }
         );
         const rows = (byMonth || []).map((m) => ({
@@ -468,6 +644,7 @@ const ReportLoop = () => {
 
       setProgressLabel("Готово");
       setTimeout(() => setProgress(0), 900);
+      setHasRunAllHosts(true);
     } catch (e) {
       setProgressLabel("Ошибка");
       setProgress(0);
@@ -559,7 +736,7 @@ const ReportLoop = () => {
       align: "right",
       onHeaderCell: () => ({
         style: {
-          background: SEVERITY_COLORS[String(sev)] || "#334155",
+          background: SEVERITY_COLORS[sev] || "#334155",
           color: "#fff",
         },
       }),
@@ -570,7 +747,8 @@ const ReportLoop = () => {
     rows.map((r, idx) => {
       const row = { key: idx, date: r.date };
       selectedValues.forEach((sev) => {
-        row[String(sev)] = r.counts[String(sev)] || 0;
+        row[String(sev)] = getCount(r.counts, sev);
+        return row[String(sev)];
       });
       return row;
     });
@@ -584,7 +762,7 @@ const ReportLoop = () => {
   const dailyChartData = dailyAllHosts.map((r) => {
     const point = { date: r.date };
     selectedValues.forEach(
-      (sev) => (point[String(sev)] = r.counts[String(sev)] || 0)
+      (sev) => (point[String(sev)] = getCount(r.counts, sev))
     );
     return point;
   });
@@ -592,7 +770,7 @@ const ReportLoop = () => {
   const monthlyChartData = monthlyAllHosts.map((r) => {
     const point = { date: r.date };
     selectedValues.forEach(
-      (sev) => (point[String(sev)] = r.counts[String(sev)] || 0)
+      (sev) => (point[String(sev)] = getCount(r.counts, sev))
     );
     return point;
   });
@@ -658,7 +836,11 @@ const ReportLoop = () => {
         label={progressLabel}
       />
 
-      <Space direction="vertical" size="large" style={{ display: "flex", padding: 12 }}>
+      <Space
+        direction="vertical"
+        size="large"
+        style={{ display: "flex", padding: 12 }}
+      >
         {/* ====== ФИЛЬТРЫ ====== */}
         <Card size="small">
           <Flex align="center" gap={12} wrap>
@@ -674,6 +856,7 @@ const ReportLoop = () => {
               format="YYYY-MM-DD HH:mm"
               onChange={(value) => setDateRange(value)}
             />
+            <Divider type="vertical" />
             <Button size="small" onClick={setLastWeek}>
               Последняя неделя
             </Button>
@@ -722,7 +905,11 @@ const ReportLoop = () => {
               onChange={setSelectedValueGroup}
             >
               {groups?.map((item) => (
-                <Option key={item.groupid} value={item.groupid} label={item.name}>
+                <Option
+                  key={item.groupid}
+                  value={item.groupid}
+                  label={item.name}
+                >
                   {item.name}
                 </Option>
               ))}
@@ -746,11 +933,19 @@ const ReportLoop = () => {
               ]}
             />
 
+            <Checkbox
+              checked={includeMM}
+              onChange={(e) => setIncludeMM(e.target.checked)}
+            >
+              Учитывать события в MM (для агрегатов и модалки)
+            </Checkbox>
+
             <Button
               type="primary"
               onClick={handleAllHostsCounts}
               disabled={
-                !(dateRange?.[0] && dateRange?.[1]) || (selectedValues?.length ?? 0) === 0
+                !(dateRange?.[0] && dateRange?.[1]) ||
+                (selectedValues?.length ?? 0) === 0
               }
             >
               Выполнить запрос (все хосты)
@@ -772,12 +967,18 @@ const ReportLoop = () => {
                 Выгрузить (итого)
               </Button>
 
+              <Button onClick={openAuditModal}>
+                Отладка: показать события
+              </Button>
+
               <Button
                 onClick={exportAllHostsBreakdown}
                 disabled={
                   splitMode === "total" ||
-                  (splitMode === "daily" && (dailyAllHosts?.length ?? 0) === 0) ||
-                  (splitMode === "monthly" && (monthlyAllHosts?.length ?? 0) === 0)
+                  (splitMode === "daily" &&
+                    (dailyAllHosts?.length ?? 0) === 0) ||
+                  (splitMode === "monthly" &&
+                    (monthlyAllHosts?.length ?? 0) === 0)
                 }
                 icon={<DownloadForOfflineIcon />}
               >
@@ -796,9 +997,9 @@ const ReportLoop = () => {
               Период:{" "}
               <Text strong>
                 {dateRange?.[0] && dateRange?.[1]
-                  ? `${dayjs(dateRange[0]).format("YYYY-MM-DD HH:mm")} → ${dayjs(
-                      dateRange[1]
-                    ).format("YYYY-MM-DD HH:mm")}`
+                  ? `${dayjs(dateRange[0]).format(
+                      "YYYY-MM-DD HH:mm"
+                    )} → ${dayjs(dateRange[1]).format("YYYY-MM-DD HH:mm")}`
                   : "-"}
               </Text>
             </Text>
@@ -806,7 +1007,7 @@ const ReportLoop = () => {
               Всего (сумма выбранных):{" "}
               <Text strong>
                 {selectedValues.reduce(
-                  (s, sev) => s + (countsAllHosts[String(sev)] || 0),
+                  (s, sev) => s + getCount(countsAllHosts, sev),
                   0
                 )}
               </Text>
@@ -832,14 +1033,14 @@ const ReportLoop = () => {
                         width: 8,
                         height: 8,
                         borderRadius: 999,
-                        background: SEVERITY_COLORS[String(sev)],
+                        background: SEVERITY_COLORS[sev],
                         marginRight: 6,
                         verticalAlign: "middle",
                       }}
                     />
                     {SEVERITY_LABELS[String(sev)] || sev}:{" "}
                     <b style={{ marginLeft: 4 }}>
-                      {countsAllHosts[String(sev)] || 0}
+                      {getCount(countsAllHosts, sev)}
                     </b>
                   </span>
                 ))}
@@ -848,82 +1049,101 @@ const ReportLoop = () => {
           </Space>
 
           {/* График */}
-          {(splitMode === "daily" || splitMode === "monthly") && (
-            <Card size="small" style={{ marginBottom: 12 }}>
-              <Text strong style={{ display: "block", marginBottom: 8 }}>
-                График ({splitMode === "daily" ? "по дням" : "по месяцам"})
-              </Text>
-              <div style={{ width: "100%", height: 280 }}>
-                <ResponsiveContainer>
-                  <LineChart data={splitMode === "daily" ? dailyChartData : monthlyChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Legend />
-                    {selectedValues.map((sev) => (
-                      <Line
-                        key={sev}
-                        type="monotone"
-                        dataKey={String(sev)}
-                        name={SEVERITY_LABELS[String(sev)] || String(sev)}
-                        stroke={SEVERITY_COLORS[String(sev)]}
-                        dot={false}
-                        strokeWidth={2}
-                        isAnimationActive={false}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          )}
+          {hasRunAllHosts &&
+            (splitMode === "daily" || splitMode === "monthly") &&
+            ((splitMode === "daily" && dailyAllHosts.length > 0) ||
+              (splitMode === "monthly" && monthlyAllHosts.length > 0)) && (
+              <Card size="small" style={{ marginBottom: 12 }}>
+                <Text strong style={{ display: "block", marginBottom: 8 }}>
+                  График ({splitMode === "daily" ? "по дням" : "по месяцам"})
+                </Text>
+                <div style={{ width: "100%", height: 280 }}>
+                  <ResponsiveContainer>
+                    <LineChart
+                      data={
+                        splitMode === "daily"
+                          ? dailyChartData
+                          : monthlyChartData
+                      }
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      {selectedValues.map((sev) => (
+                        <Line
+                          key={sev}
+                          type="monotone"
+                          dataKey={String(sev)}
+                          name={SEVERITY_LABELS[String(sev)] || String(sev)}
+                          stroke={SEVERITY_COLORS[sev]}
+                          dot={false}
+                          strokeWidth={2}
+                          isAnimationActive={false}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            )}
 
-          {/* Таблицы */}
-          {splitMode === "daily" && (
-            <Card size="small">
-              <Text strong style={{ display: "block", marginBottom: 8 }}>
-                Разбивка по дням (все хосты)
-              </Text>
-              <Table
-                size="small"
-                pagination={{
-                  pageSize: dailyPageSize,
-                  showSizeChanger: true,
-                  pageSizeOptions: ["7", "14", "30", "60", "90"],
-                  onShowSizeChange: (_, size) => setDailyPageSize(size),
-                }}
-                columns={dailyTableColumns}
-                dataSource={dailyTableData}
-              />
-            </Card>
-          )}
+          {/* Таблица по дням */}
+          {hasRunAllHosts &&
+            splitMode === "daily" &&
+            dailyAllHosts.length > 0 && (
+              <Card size="small">
+                <Text strong style={{ display: "block", marginBottom: 8 }}>
+                  Разбивка по дням (все хосты)
+                </Text>
+                <Table
+                  size="small"
+                  pagination={{
+                    pageSize: dailyPageSize,
+                    showSizeChanger: true,
+                    pageSizeOptions: ["7", "14", "30", "60", "90"],
+                    onShowSizeChange: (_, size) => setDailyPageSize(size),
+                  }}
+                  columns={dailyTableColumns}
+                  dataSource={dailyTableData}
+                />
+              </Card>
+            )}
 
-          {splitMode === "monthly" && (
-            <Card size="small">
-              <Text strong style={{ display: "block", marginBottom: 8 }}>
-                Разбивка по месяцам (все хосты)
-              </Text>
-              <Table
-                size="small"
-                pagination={{
-                  pageSize: monthlyPageSize,
-                  showSizeChanger: true,
-                  pageSizeOptions: ["6", "12", "24", "36", "60"],
-                  onShowSizeChange: (_, size) => setMonthlyPageSize(size),
-                }}
-                columns={monthlyTableColumns}
-                dataSource={monthlyTableData}
-              />
-            </Card>
-          )}
+          {/* Таблица по месяцам */}
+          {hasRunAllHosts &&
+            splitMode === "monthly" &&
+            monthlyAllHosts.length > 0 && (
+              <Card size="small">
+                <Text strong style={{ display: "block", marginBottom: 8 }}>
+                  Разбивка по месяцам (все хосты)
+                </Text>
+                <Table
+                  size="small"
+                  pagination={{
+                    pageSize: monthlyPageSize,
+                    showSizeChanger: true,
+                    pageSizeOptions: ["6", "12", "24", "36", "60"],
+                    onShowSizeChange: (_, size) => setMonthlyPageSize(size),
+                  }}
+                  columns={monthlyTableColumns}
+                  dataSource={monthlyTableData}
+                />
+              </Card>
+            )}
         </Card>
 
         {/* ====== РЕЗУЛЬТАТЫ: ПО ГРУППАМ (как было) ====== */}
-        <Card size="small" title={<Text strong>Результаты — по выбранным группам</Text>}>
+        <Card
+          size="small"
+          title={<Text strong>Результаты — по выбранным группам</Text>}
+        >
           <Space
             wrap
-            split={<Divider type="vertical" style={{ borderColor: "#334155" }} />}
+            split={
+              <Divider type="vertical" style={{ borderColor: "#334155" }} />
+            }
             style={{ marginBottom: 12 }}
           >
             <Text>
@@ -955,11 +1175,13 @@ const ReportLoop = () => {
                   ))}
                 </Space>
               ) : (
-                <Text type="secondary" style={{ marginLeft: 6 }}>—</Text>
+                <Text type="secondary" style={{ marginLeft: 6 }}>
+                  —
+                </Text>
               )}
             </Text>
 
-            {/* 🧮 Новое: по каждой выбранной группе — сколько в ней хостов */}
+            {/* 🧮 По каждой выбранной группе — сколько в ней хостов */}
             <Text>
               Группы (хостов):
               {selectedGroupsInfo.length > 0 ? (
@@ -981,7 +1203,9 @@ const ReportLoop = () => {
                   ))}
                 </Space>
               ) : (
-                <Text type="secondary" style={{ marginLeft: 6 }}>—</Text>
+                <Text type="secondary" style={{ marginLeft: 6 }}>
+                  —
+                </Text>
               )}
             </Text>
           </Space>
@@ -1027,6 +1251,105 @@ const ReportLoop = () => {
           )}
         </Card>
       </Space>
+
+      {/* ===== МОДАЛКА ОТЛАДКИ ===== */}
+      <Modal
+        open={debugOpen}
+        onCancel={() => setDebugOpen(false)}
+        width={1100}
+        footer={null}
+        title="Отладка: события (как считаем в отчёте)"
+      >
+        <Space style={{ marginBottom: 8 }} wrap>
+          <Text>
+            Период:{" "}
+            <Text strong>
+              {dateRange?.[0] && dateRange?.[1]
+                ? `${dayjs(dateRange[0]).format("YYYY-MM-DD HH:mm")} → ${dayjs(
+                    dateRange[1]
+                  ).format("YYYY-MM-DD HH:mm")}`
+                : "-"}
+            </Text>
+          </Text>
+          <Divider type="vertical" />
+          <Text>
+            MM:{" "}
+            <Text strong>
+              {includeMM
+                ? "учитываем (показываем и в ММ, и вне ММ)"
+                : "исключаем (показываем только вне ММ)"}
+            </Text>
+          </Text>
+          <Divider type="vertical" />
+          <Select
+            allowClear
+            placeholder="Фильтр по severity (для запроса)"
+            value={debugSevFilter}
+            onChange={(v) => setDebugSevFilter(v ?? null)}
+            style={{ width: 240 }}
+            options={selectedValues.map((sev) => ({
+              value: sev,
+              label: SEVERITY_LABELS[String(sev)] || String(sev),
+            }))}
+          />
+          <Button
+            type="primary"
+            loading={debugLoading}
+            onClick={openAuditModal}
+          >
+            Обновить список
+          </Button>
+          <Button
+            icon={<DownloadForOfflineIcon />}
+            onClick={exportAuditToExcel}
+            disabled={debugLoading || (debugRows?.length ?? 0) === 0}
+          >
+            Выгрузить в Excel
+          </Button>
+          {debugLoading && (
+            <div style={{ minWidth: 220 }}>
+              <Progress percent={debugProgress} status="active" />
+            </div>
+          )}
+        </Space>
+
+        <Table
+          size="small"
+          loading={debugLoading}
+          dataSource={debugRows}
+          pagination={{ pageSize: 50, showSizeChanger: true }}
+          columns={[
+            { title: "Время", dataIndex: "time", key: "time", width: 160 },
+            { title: "Хост", dataIndex: "host", key: "host", width: 220 },
+            {
+              title: "Severity",
+              dataIndex: "severity",
+              key: "severity",
+              width: 140,
+              render: (sev) => (
+                <Tag color={SEVERITY_COLORS[sev] || "#334155"}>
+                  {SEVERITY_LABELS[String(sev)] || String(sev)}
+                </Tag>
+              ),
+            },
+            { title: "Trigger", dataIndex: "trigger", key: "trigger" },
+            {
+              title: "В ММ",
+              dataIndex: "suppressed",
+              key: "suppressed",
+              width: 90,
+              render: (v) =>
+                asBool(v) ? <Tag color="magenta">Да</Tag> : <Tag>Нет</Tag>,
+            },
+            {
+              title: "eventid",
+              dataIndex: "eventid",
+              key: "eventid",
+              width: 120,
+            },
+          ]}
+        />
+      </Modal>
     </ConfigProvider>
   );
 };
